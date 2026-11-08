@@ -1,0 +1,351 @@
+/* PelangganLoader v2: teapot pouring coffee into a cup. Flat SVG, no box
+   or card around the scene. One 2.6s cycle, everything synchronised.
+   The loader slides down from the top edge of the view, hangs at the top
+   while loading, and slides back up when done. */
+
+.pelanggan-loader {
+  text-align: center;
+  padding: 4px 0 8px;
+  transform: translateY(-110%);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pelanggan-loader.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.pelanggan-loader.is-exiting {
+  transform: translateY(-110%);
+  opacity: 0;
+}
+
+.loader-scene {
+  display: inline-block;
+  animation: loader-bob 1.2s ease-in-out infinite;
+}
+
+.loader-scene svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+@keyframes loader-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Teapot: tilts forward toward the cup, holds the pour, returns. */
+.loader-teapot {
+  transform-box: view-box;
+  transform-origin: 96px 104px;
+  animation: teapot-tilt 2.6s ease-in-out infinite;
+}
+
+@keyframes teapot-tilt {
+  0%,
+  10% {
+    transform: rotate(0deg);
+  }
+  22%,
+  68% {
+    transform: rotate(14deg);
+  }
+  86%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+.teapot-body {
+  fill: var(--accent-peach);
+}
+
+.teapot-spout {
+  fill: var(--accent-peach);
+}
+
+.teapot-lid {
+  fill: var(--accent-orange);
+}
+
+.teapot-knob {
+  fill: var(--accent-orange);
+}
+
+.teapot-handle {
+  fill: none;
+  stroke: var(--accent-peach);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+/* Coffee stream: arcs from the spout tip into the cup, in sync with the tilt. */
+.loader-stream {
+  fill: none;
+  stroke: #6b4226;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 32;
+  stroke-dashoffset: 32;
+  opacity: 0;
+  animation: stream-flow 2.6s ease-in-out infinite;
+}
+
+@keyframes stream-flow {
+  0%,
+  12% {
+    opacity: 0;
+    stroke-dashoffset: 32;
+  }
+  24% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+  68% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+  84%,
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Cup: sways and tilts left-right while the coffee rises inside it. */
+.loader-cup {
+  transform-box: view-box;
+  transform-origin: 190px 170px;
+  animation: cup-sway 2.6s ease-in-out infinite;
+}
+
+@keyframes cup-sway {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  30% {
+    transform: rotate(2.5deg);
+  }
+  60% {
+    transform: rotate(-2.5deg);
+  }
+  85% {
+    transform: rotate(1deg);
+  }
+}
+
+.cup-body {
+  fill: #f5efe6;
+}
+
+.cup-handle {
+  fill: none;
+  stroke: #f5efe6;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.loader-coffee {
+  fill: #6b4226;
+  transform: translateY(30px);
+  animation: coffee-rise 2.6s ease-in-out infinite;
+}
+
+@keyframes coffee-rise {
+  0% {
+    transform: translateY(30px);
+  }
+  60% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(8px);
+  }
+}
+
+/* Steam: three waves rising above the cup, staggered. */
+.loader-steam path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.75);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: steam-rise 2.6s ease-in-out infinite;
+}
+
+.loader-steam path:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+.loader-steam path:nth-child(3) {
+  animation-delay: 0.7s;
+}
+
+@keyframes steam-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  35% {
+    opacity: 0.7;
+  }
+  70% {
+    opacity: 0.35;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+/* Spills: drops fall from the cup rim to the saucer, puddle grows. */
+.loader-drop {
+  fill: #6b4226;
+  opacity: 0;
+  animation: drop-fall 2.6s ease-in infinite;
+}
+
+.loader-drop.drop-b {
+  animation-delay: 0.9s;
+}
+
+@keyframes drop-fall {
+  0%,
+  55% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  62% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0;
+    transform: translateY(44px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(44px);
+  }
+}
+
+.loader-saucer {
+  fill: rgba(255, 255, 255, 0.18);
+  stroke: var(--hairline);
+}
+
+.loader-puddle {
+  fill: #6b4226;
+  transform-box: view-box;
+  transform-origin: 222px 172px;
+  transform: scaleX(0.2);
+  opacity: 0.4;
+  animation: puddle-grow 2.6s ease-in-out infinite;
+}
+
+@keyframes puddle-grow {
+  0%,
+  50% {
+    transform: scaleX(0.2);
+    opacity: 0;
+  }
+  80%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.85;
+  }
+}
+
+/* Free-floating label, no card behind it. Text shadow keeps it readable
+   over the photo. */
+.loader-text {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.65),
+    0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.loader-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  height: 8px;
+}
+
+.loader-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-teal);
+  animation: dot-bounce 0.9s ease-in-out infinite;
+}
+
+.loader-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.loader-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dot-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pelanggan-loader {
+    transition: opacity 0.2s ease;
+    transform: none;
+  }
+
+  .pelanggan-loader.is-exiting {
+    transform: none;
+  }
+
+  .loader-scene,
+  .loader-teapot,
+  .loader-stream,
+  .loader-cup,
+  .loader-coffee,
+  .loader-steam path,
+  .loader-drop,
+  .loader-puddle,
+  .loader-dots span {
+    animation: none;
+  }
+
+  .loader-stream,
+  .loader-coffee,
+  .loader-puddle {
+    opacity: 1;
+  }
+
+  .loader-coffee {
+    transform: translateY(10px);
+  }
+}

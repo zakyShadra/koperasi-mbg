@@ -1,0 +1,156 @@
+/* Manager page: stats row, chart + report side by side, orders table full width. */
+
+.manager-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.stats-row-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.manager-mid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.card-total {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.card-count {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.card-foot {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chart-card,
+.orders-card,
+.report-panel {
+  min-width: 0;
+}
+
+.orders-card {
+  overflow-x: auto;
+}
+
+/* Report panel (src/features/manager/ReportPanel.tsx) */
+
+.report-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.report-panel .card-head {
+  margin-bottom: 0;
+}
+
+.report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-field > span,
+.tx-field > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.report-field select,
+.tx-field input,
+.tx-field select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: rgba(20, 28, 25, 0.9);
+  color: var(--ink);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.report-field select:focus-visible,
+.tx-field input:focus-visible,
+.tx-field select:focus-visible,
+.filter-search:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 1px;
+}
+
+.report-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.demo-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--accent-peach);
+  font-size: 12px;
+}
+
+@media (max-width: 1024px) {
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-row-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .manager-mid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-row,
+  .stats-row-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .card-head {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manager-page * {
+    animation: none;
+    transition: none;
+  }
+}

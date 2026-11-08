@@ -1,0 +1,407 @@
+/* Barista page: kanban board + warkop catalog panel. Uses tokens from
+   src/styles/tokens.css and shared classes from src/styles/components.css. */
+
+.barista-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 24px 32px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.barista-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.barista-open {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.open-switch {
+  width: 56px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: rgba(13, 19, 17, 0.55);
+  padding: 3px;
+  cursor: pointer;
+  transition: background 250ms ease-in-out;
+  flex-shrink: 0;
+}
+
+.open-switch.is-on {
+  background: var(--accent-teal);
+}
+
+.open-knob {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 250ms ease-in-out;
+}
+
+.open-switch.is-on .open-knob {
+  transform: translateX(26px);
+}
+
+.barista-open-label {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.barista-open-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.barista-clock {
+  text-align: right;
+}
+
+.barista-time {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.barista-date {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.kanban-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--hairline);
+}
+
+.kanban-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.kanban-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0a0f0d;
+  background: var(--ink);
+}
+
+.kanban-peach .kanban-header {
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.kanban-teal .kanban-header {
+  background: rgba(45, 212, 191, 0.16);
+  border-color: rgba(45, 212, 191, 0.45);
+}
+
+.kanban-green .kanban-header {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.kanban-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kanban-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--hairline);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.order-card {
+  animation: kanban-in 250ms ease-in-out both;
+}
+
+@keyframes kanban-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.order-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.order-number {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.order-items {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-items li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--body);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.order-qty {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.order-total {
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.source-badge {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+}
+
+.source-web {
+  color: var(--accent-teal);
+  border-color: var(--accent-teal);
+}
+
+.source-shopeefood {
+  color: var(--shopeefood);
+  border-color: var(--shopeefood);
+}
+
+.order-waiting {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.order-waiting.is-late {
+  color: var(--accent-peach);
+  font-weight: 600;
+}
+
+.order-draft-warning {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 107, 74, 0.14);
+  border: 1px solid rgba(255, 107, 74, 0.45);
+  color: var(--shopeefood);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.order-action {
+  width: 100%;
+}
+
+.barista-done-note {
+  margin: 0;
+  color: var(--success);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.barista-shopee-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.catalog-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.catalog-panel-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.catalog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.catalog-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.catalog-row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.catalog-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.catalog-price {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-toggle {
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--body);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 180ms ease-in-out, color 180ms ease-in-out, transform 120ms ease-in-out;
+}
+
+.catalog-toggle:active {
+  transform: scale(0.97);
+}
+
+.catalog-toggle.is-available {
+  color: var(--success);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.catalog-toggle.is-out {
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.catalog-hint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+
+  .barista-page {
+    padding: 12px 16px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .open-switch,
+  .open-knob,
+  .catalog-toggle {
+    transition: none;
+  }
+
+  .order-card {
+    animation: none;
+  }
+}
