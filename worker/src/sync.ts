@@ -119,7 +119,15 @@ export async function mirrorUpsert(
   if (rowNums) body.rowNums = rowNums;
   ctx.waitUntil(
     (async () => {
+      const keys = rows.map((r) => rowKey(tab, r)).join(",");
       const res = await gasPost(env, body);
+      if (!res || res.ok !== true) {
+        await logSync(env, "worker_ke_sheet", tab, keys, "error",
+          `mirror gagal: ${res ? JSON.stringify(res).slice(0, 200) : "tidak ada respons dari GAS"}`);
+        return;
+      }
+      await logSync(env, "worker_ke_sheet", tab, keys, "upsert",
+        `mirror ok: ${rows.length} baris, updated=${Number(res.updated ?? 0)}, inserted=${Number(res.inserted ?? 0)}`);
       const skipped = res && Array.isArray(res.skipped) ? (res.skipped as Record<string, unknown>[]) : [];
       for (const s of skipped) {
         await logSync(env, "worker_ke_sheet", tab, String(s.key ?? ""), "lewat_konflik",
@@ -314,7 +322,13 @@ export async function upsertToSheet(
   const body: Record<string, unknown> = { op: "upsert", tab, keyCols: KEY_COLS[tab], rows };
   if (rowNums) body.rowNums = rowNums;
   const res = await gasPost(env, body);
-  if (!res || res.ok !== true) return null;
+  if (!res || res.ok !== true) {
+    await logSync(env, "worker_ke_sheet", tab, rows.map((r) => rowKey(tab, r)).join(","), "error",
+      `mirror gagal: ${res ? JSON.stringify(res).slice(0, 200) : "tidak ada respons dari GAS"}`);
+    return null;
+  }
+  await logSync(env, "worker_ke_sheet", tab, rows.map((r) => rowKey(tab, r)).join(","), "upsert",
+    `mirror ok: ${rows.length} baris, updated=${Number(res.updated ?? 0)}, inserted=${Number(res.inserted ?? 0)}`);
   return {
     updated: Number(res.updated ?? 0),
     inserted: Number(res.inserted ?? 0),
