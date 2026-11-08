@@ -21,7 +21,7 @@ Kode Worker ada di folder `worker/` di repo ini (deploy: `cd worker &&
 wrangler deploy`). Detail API: `worker/API.md`. Migrasi ke akun
 Cloudflare khusus koperasi: `worker/MIGRATION.md`.
 
-Spreadsheet kerja: https://docs.google.com/spreadsheets/d/1NCwWg4Pr0H9eqD_0LWS7pOQmD3HPWbgMmInjVrsztPQ/edit
+Spreadsheet kerja: https://docs.google.com/spreadsheets/d/1YLyLFdnuJ9P8rVuXAGMceX8C7SUCXesScCdxTu1Mu6k/edit
 (D1 sumber kebenaran, Sheet cuma cermin append-only. Link "Buka
 Spreadsheet" ada di halaman manager dan finance.)
 
