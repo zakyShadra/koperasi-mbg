@@ -635,7 +635,11 @@ async function applyLaporan(env: SyncEnv, row: Record<string, unknown>, key: str
   let stafId: number | null = null;
   if (email) {
     const s = await env.DB.prepare("SELECT id FROM staf WHERE email = ?").bind(email).first<{ id: number }>();
-    stafId = s?.id ?? null;
+    if (!s) {
+      await logSync(env, "sheet_ke_worker", "Laporan", key, "error", `dibuat_oleh ${email} tidak ada di tabel staf`);
+      return { result: "error", detail: `dibuat_oleh ${email} tidak ada di tabel staf`, key };
+    }
+    stafId = s.id;
   }
   const dibuat = normTs(row.dibuat_pada) || ts;
   const existing = await env.DB.prepare(
