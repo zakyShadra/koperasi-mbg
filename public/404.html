@@ -9,7 +9,8 @@
       // https://github.com/rafgraph/spa-github-pages
       // Redirects deep links (e.g. /koperasi-mbg/manager) to the app root
       // with the path encoded in the query string, so the SPA can restore it.
-      var pathSegmentsToKeep = 1;
+      var pathSegmentsToKeep =
+        window.location.pathname.split('/')[1] === 'koperasi-mbg' ? 1 : 0;
       var l = window.location;
       l.replace(
         l.protocol +

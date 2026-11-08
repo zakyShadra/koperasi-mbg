@@ -14,6 +14,7 @@ import Pelanggan from '../pages/Pelanggan';
 import CartPage from '../pages/CartPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import TrackerPage from '../pages/TrackerPage';
+import { appBase } from '../lib/app-base';
 
 const TITLES: Record<string, string> = {
   '/manager': 'Dashboard manager',
@@ -119,7 +120,7 @@ function Layout() {
 
 export default function AppRouter() {
   return (
-    <BrowserRouter basename="/koperasi-mbg">
+    <BrowserRouter basename={appBase() || "/"}>
       <Layout />
     </BrowserRouter>
   );

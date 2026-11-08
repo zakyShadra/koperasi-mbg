@@ -1,6 +1,7 @@
 import { clearSession, getSession, saveSession } from './auth-session';
 import type { Session } from './auth-session';
 import type { Order, OrderStatus, Product } from './dummy';
+import { appBase } from './app-base';
 
 export const API_BASE = 'https://koperasi-mbg-api.zakyshadra.workers.dev';
 export const SHEET_URL =
@@ -93,7 +94,7 @@ async function apiFetch<T>(
   if (!res.ok || !data || data.ok === false) {
     if (data?.error === 'unauthorized' && !isAuthPath(path)) {
       clearSession();
-      const loginPath = `${import.meta.env.BASE_URL}kprmbg20asdf`;
+      const loginPath = `${appBase()}/kprmbg20asdf`;
       if (window.location.pathname !== loginPath) {
         window.location.href = loginPath;
       }
