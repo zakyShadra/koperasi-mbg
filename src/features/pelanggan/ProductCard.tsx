@@ -1,5 +1,6 @@
 import type { Product } from '../../lib/dummy';
 import { fmtRp } from '../../lib/format';
+import { isOut } from './cart';
 
 const THUMB_GRADIENTS: Array<[string, string]> = [
   ['#2DD4BF', '#0E7490'],
@@ -16,7 +17,7 @@ export interface ProductCardProps {
 }
 
 export function ProductCard({ product, onAdd, delay = 0, disabled = false }: ProductCardProps) {
-  const out = product.stock <= 0;
+  const out = isOut(product);
   const seed = product.initial ? product.initial.charCodeAt(0) : 0;
   const [c1, c2] = THUMB_GRADIENTS[seed % THUMB_GRADIENTS.length];
 

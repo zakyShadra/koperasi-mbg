@@ -27,10 +27,21 @@ export interface PlacedOrder {
   orderId?: number;
 }
 
+export function isOut(product: Product): boolean {
+  return product.stock <= 0 || product.available === false;
+}
+
+export function findOutLines(lines: CartLine[], fresh: Map<number, Product>): CartLine[] {
+  return lines.filter((line) => {
+    const current = line.product.apiId !== undefined ? fresh.get(line.product.apiId) : undefined;
+    return isOut(current ?? line.product);
+  });
+}
+
 // Fungsi murni keranjang: satu modul, satu pekerjaan. Tidak ada fetch,
 // tidak ada render, cuma hitung dari data keranjang yang masuk.
 export function addLine(lines: CartLine[], product: Product): CartLine[] {
-  if (product.stock <= 0) return lines;
+  if (isOut(product)) return lines;
   const existing = lines.find((line) => line.product.id === product.id);
   if (existing) {
     if (existing.qty >= product.stock) return lines;
@@ -49,6 +60,7 @@ export function changeLineQty(
   return lines
     .map((line) => {
       if (line.product.id !== productId) return line;
+      if (delta > 0 && isOut(line.product)) return line;
       const qty = Math.min(line.qty + delta, line.product.stock);
       return { ...line, qty };
     })

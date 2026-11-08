@@ -1,4 +1,5 @@
 import type { CartLine } from './cart';
+import { isOut } from './cart';
 import { fmtRp } from '../../lib/format';
 
 // Daftar isi keranjang + total, dipakai ulang di halaman keranjang dan
@@ -24,6 +25,7 @@ export function CartLines({ items, onChangeQty, readOnly = false }: CartLinesPro
               <div className="cart-item">
                 <p className="cart-name">{line.product.name}</p>
                 <p className="cart-price">{fmtRp(line.product.price)}</p>
+                {isOut(line.product) && <p className="cart-out-note">Habis, hapus dari keranjang untuk lanjut.</p>}
               </div>
               {readOnly ? (
                 <span className="qty-value">x{line.qty}</span>

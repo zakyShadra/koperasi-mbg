@@ -42,6 +42,8 @@ const ERROR_TEXT: Record<string, string> = {
   pesanan_sudah_final_tidak_bisa_diubah: 'Pesanan sudah final dan tidak bisa diubah.',
   stok_kosong_produk_tidak_bisa_ditandai_tersedia:
     'Stok kosong, produk tidak bisa ditandai tersedia.',
+  produk_tidak_tersedia: 'Produk sedang tidak tersedia.',
+  produk_sedang_tidak_tersedia: 'Produk sedang tidak tersedia.',
   harga_harus_lebih_dari_0: 'Harga harus lebih dari 0.',
   butuh_otp_baru_untuk_ubah_harga: 'Ubah harga butuh kode OTP baru.',
   jumlah_harus_lebih_dari_0: 'Jumlah harus lebih dari 0.',
@@ -58,6 +60,13 @@ export function friendlyError(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.code.startsWith('stok_tidak_cukup:')) {
       return `Stok tidak cukup: ${e.code.slice('stok_tidak_cukup:'.length)}.`;
+    }
+    if (
+      e.code.startsWith('produk_tidak_tersedia:') ||
+      e.code.startsWith('produk_sedang_tidak_tersedia:')
+    ) {
+      const name = e.code.split(':').slice(1).join(':');
+      return `Produk sedang tidak tersedia${name ? `: ${name}` : ''}.`;
     }
     if (e.code.startsWith('produk_tidak_ditemukan:')) {
       return 'Salah satu produk tidak ditemukan, muat ulang katalog.';

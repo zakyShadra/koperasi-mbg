@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { View } from '../components/View';
@@ -6,10 +6,11 @@ import { GlassCard } from '../components/GlassCard';
 import { CartLines } from '../features/pelanggan/CartPanel';
 import { PelangganLoader } from '../features/pelanggan/PelangganLoader';
 import { WarkopClosedBanner } from '../features/pelanggan/WarkopClosed';
-import { PAYMENT_METHODS } from '../features/pelanggan/cart';
+import { PAYMENT_METHODS, findOutLines } from '../features/pelanggan/cart';
 import type { PaymentMethodId, PlacedOrder } from '../features/pelanggan/cart';
 import { useCart } from '../features/pelanggan/cart-context';
-import { createOrder, friendlyError } from '../lib/api';
+import { createOrder, friendlyError, getCatalog, mapProduct } from '../lib/api';
+import type { Product } from '../lib/dummy';
 import { useWarkopStatus } from '../lib/warkop';
 import './Pelanggan.css';
 
@@ -23,6 +24,22 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const { status: warkopStatus, refresh: refreshWarkop } = useWarkopStatus();
   const closed = warkopStatus === 'tutup';
+  const [fresh, setFresh] = useState<Map<number, Product>>(new Map());
+
+  useEffect(() => {
+    let cancelled = false;
+    void getCatalog()
+      .then((items) => {
+        if (cancelled) return;
+        setFresh(new Map(items.map((p) => [p.id, mapProduct(p)])));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const outLines = useMemo(() => findOutLines(lines, fresh), [lines, fresh]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -37,6 +54,12 @@ export default function CheckoutPage() {
     const missing = lines.some((line) => !line.product.apiId);
     if (missing) {
       setError('Katalog belum termuat dari server, muat ulang halaman.');
+      return;
+    }
+    if (outLines.length > 0) {
+      setError(
+        `${outLines.map((l) => l.product.name).join(', ')} sudah Habis. Hapus dari keranjang dulu.`,
+      );
       return;
     }
     setError('');
@@ -99,6 +122,11 @@ export default function CheckoutPage() {
             ) : (
               <>
                 <CartLines items={lines} readOnly />
+                {outLines.length > 0 && (
+                  <p className="cart-error" role="alert">
+                    {outLines.map((l) => l.product.name).join(', ')} sudah Habis. Kembali ke keranjang dan hapus item itu dulu.
+                  </p>
+                )}
                 <form className="cart-form" onSubmit={(e) => void handleSubmit(e)}>
                   <label className="cart-field">
                     <span>Nama</span>
@@ -142,7 +170,7 @@ export default function CheckoutPage() {
                   <button
                     type="submit"
                     className="btn btn-primary cart-submit"
-                    disabled={submitting || closed}
+                    disabled={submitting || closed || outLines.length > 0}
                   >
                     {closed
                       ? 'Warkop tutup, pesanan dijeda'

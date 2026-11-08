@@ -459,6 +459,13 @@
   line-height: 1.5;
 }
 
+.cart-out-note {
+  margin: 2px 0 0;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .cart-submit {
   width: 100%;
 }
