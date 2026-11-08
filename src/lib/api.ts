@@ -152,6 +152,8 @@ export interface ApiOrder {
   nomor_pesanan: string;
   nama_pelanggan: string;
   no_wa_pelanggan?: string;
+  no_wa_masked?: string;
+  verified?: boolean;
   status: ApiOrderStatus;
   total: number;
   catatan: string | null;
@@ -263,11 +265,25 @@ export async function createWalkIn(items: { product_id: number; qty: number }[])
   });
 }
 
-export async function getOrder(number: string): Promise<{
+export function maskWa(wa: string): string {
+  const digits = wa.replace(/\D/g, '');
+  if (digits.length <= 4) return digits;
+  if (digits.length <= 8) return `${digits.slice(0, 2)}****${digits.slice(-2)}`;
+  return `${digits.slice(0, 4)}****${digits.slice(-4)}`;
+}
+
+export function normWa(wa: string): string {
+  const digits = wa.replace(/\D/g, '');
+  if (digits.startsWith('62')) return `0${digits.slice(2)}`;
+  return digits;
+}
+
+export async function getOrder(number: string, noWa?: string): Promise<{
   order: ApiOrder;
   items: ApiOrderItem[];
 }> {
-  return apiFetch(`/api/orders/${encodeURIComponent(number)}`);
+  const suffix = noWa ? `?no_wa=${encodeURIComponent(noWa)}` : '';
+  return apiFetch(`/api/orders/${encodeURIComponent(number)}${suffix}`);
 }
 
 export async function getOrderQris(number: string): Promise<{
