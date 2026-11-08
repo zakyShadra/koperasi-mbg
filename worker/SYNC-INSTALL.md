@@ -5,6 +5,13 @@ Apps Script yang terikat ke spreadsheet baru, deploy sebagai web app, dan
 set secret di kedua sisi. Sampai langkah ini selesai dan tes end-to-end
 lolos, sinkron BELUM live.
 
+Catatan: tab Staf adalah pengecualian dari sinkron dua arah. Tab Staf
+hanya cermin satu arah Worker ke Sheet (bot-only). Staf baru hanya
+ditambahkan admin lewat bot Telegram, lalu Worker menulis barisnya ke
+tab Staf. Edit manual di tab Staf tidak membuat login dan tidak menambah
+staf di D1, dan jalur Sheet ke D1 untuk tab Staf dihapus.
+
+
 ## Prasyarat
 
 - Spreadsheet "KoperasiMBG" (ID `1YLyLFdnuJ9P8rVuXAGMceX8C7SUCXesScCdxTu1Mu6k`,
