@@ -55,7 +55,7 @@ Masukin email, klik Kirim kode. Mode DEV masih aktif: kodenya muncul
 di halaman login (DEV ONLY, dihapus saat peluncuran). Masukin kode
 6 digit, sesi jalan 30 hari (sliding refresh, tersimpan di
 localStorage). Halaman staff (`/manager`, `/finance`, `/barista`)
-tanpa sesi bakal dilempar balik ke halaman login. Staff baru cuma bisa
+tanpa sesi bakal dilempar balik ke halaman login. Kalau sesi sudah dicabut atau kedaluwarsa di server, aplikasi langsung membersihkan sesi lokal dan melempar ke halaman login begitu ada panggilan API yang ditolak (tidak ada lagi kartu Memuat... yang menggantung). Staff baru cuma bisa
 ditambah lewat bot Telegram admin, tidak ada signup publik.
 
 Pelanggan tidak perlu login. Checkout tamu: nama + nomor WA, lacak
