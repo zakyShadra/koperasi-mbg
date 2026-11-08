@@ -10,7 +10,7 @@
       // Redirects deep links (e.g. /koperasi-mbg/manager) to the app root
       // with the path encoded in the query string, so the SPA can restore it.
       var pathSegmentsToKeep =
-        window.location.pathname.split('/')[1] === 'koperasi-mbg' ? 1 : 0;
+        window.location.hostname === 'zakyshadra.github.io' ? 1 : 0;
       var l = window.location;
       l.replace(
         l.protocol +
