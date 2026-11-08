@@ -57,7 +57,7 @@ function Layout() {
           <Route
             path="/manager"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager']}>
                 <Manager />
               </RequireAuth>
             }
@@ -65,7 +65,7 @@ function Layout() {
           <Route
             path="/manager/pesanan"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager']}>
                 <ManagerPesanan />
               </RequireAuth>
             }
@@ -73,7 +73,7 @@ function Layout() {
           <Route
             path="/manager/laporan"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager']}>
                 <ManagerLaporan />
               </RequireAuth>
             }
@@ -81,7 +81,7 @@ function Layout() {
           <Route
             path="/finance"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager', 'finance']}>
                 <Finance />
               </RequireAuth>
             }
@@ -89,7 +89,7 @@ function Layout() {
           <Route
             path="/finance/transaksi-baru"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager', 'finance']}>
                 <FinanceTransaksiBaru />
               </RequireAuth>
             }
@@ -97,7 +97,7 @@ function Layout() {
           <Route
             path="/barista"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager', 'barista']}>
                 <Barista />
               </RequireAuth>
             }
@@ -105,7 +105,7 @@ function Layout() {
           <Route
             path="/barista/katalog"
             element={
-              <RequireAuth>
+              <RequireAuth roles={['manager', 'barista']}>
                 <BaristaKatalog />
               </RequireAuth>
             }

@@ -50,3 +50,15 @@ export function clearSession(): void {
 export function isLoggedIn(): boolean {
   return getSession() !== null;
 }
+
+export type StaffRole = 'manager' | 'finance' | 'barista';
+
+export const ROLE_HOME: Record<StaffRole, string> = {
+  manager: '/manager',
+  finance: '/finance',
+  barista: '/barista',
+};
+
+export function homeForRole(role: string): string {
+  return (ROLE_HOME as Record<string, string>)[role] ?? '/pelanggan';
+}

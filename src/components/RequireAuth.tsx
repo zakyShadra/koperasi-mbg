@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { isLoggedIn } from '../lib/auth-session';
+import { getSession, homeForRole, isLoggedIn } from '../lib/auth-session';
+import type { StaffRole } from '../lib/auth-session';
 
 interface RequireAuthProps {
   children: ReactNode;
+  roles?: StaffRole[];
 }
 
-export function RequireAuth({ children }: RequireAuthProps) {
+export function RequireAuth({ children, roles }: RequireAuthProps) {
   const location = useLocation();
 
   if (!isLoggedIn()) {
@@ -17,6 +19,15 @@ export function RequireAuth({ children }: RequireAuthProps) {
         replace
       />
     );
+  }
+
+  if (roles && roles.length > 0) {
+    const session = getSession();
+    if (!session || !roles.includes(session.role)) {
+      return (
+        <Navigate to={homeForRole(session?.role ?? '')} replace />
+      );
+    }
   }
 
   return <>{children}</>;

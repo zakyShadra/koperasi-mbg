@@ -218,9 +218,12 @@ function useSidebarStats(role: RoleKey): SidebarStats | null {
     };
     void load();
     const id = window.setInterval(() => void load(), 60000);
+    const onForbidden = () => window.clearInterval(id);
+    window.addEventListener('mbg:forbidden', onForbidden);
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      window.removeEventListener('mbg:forbidden', onForbidden);
     };
   }, [role]);
 
@@ -382,6 +385,12 @@ export function Sidebar() {
         label: 'Laporan',
         icon: <IconChart />,
         status: '7 hari',
+      },
+      {
+        id: 'keuangan',
+        to: '/finance',
+        label: 'Keuangan',
+        icon: <IconWallet />,
       },
     ],
     finance: [

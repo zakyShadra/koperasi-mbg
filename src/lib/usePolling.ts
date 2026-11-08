@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { isForbiddenError } from './api';
 
 export function usePolling(
   refresh: () => Promise<string | void>,
@@ -12,13 +13,24 @@ export function usePolling(
   const lastPrint = useRef<string | null>(null);
   const hideTimer = useRef<number | null>(null);
   const startedRef = useRef(false);
+  const stoppedRef = useRef(false);
+  const intervalRef = useRef<number | null>(null);
+
+  const stop = useCallback(() => {
+    stoppedRef.current = true;
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
   const run = useCallback(async () => {
-    if (pausedRef.current || document.hidden) return;
+    if (stoppedRef.current || pausedRef.current || document.hidden) return;
     let print: string | void;
     try {
       print = await refreshRef.current();
-    } catch {
+    } catch (e) {
+      if (isForbiddenError(e)) stop();
       return;
     }
     if (!print) return;
@@ -34,6 +46,9 @@ export function usePolling(
 
   useEffect(() => {
     const id = window.setInterval(() => void run(), intervalMs);
+    intervalRef.current = id;
+    const onForbidden = () => stop();
+    window.addEventListener('mbg:forbidden', onForbidden);
     const onVisible = () => {
       if (!document.hidden) void run();
     };
@@ -41,10 +56,12 @@ export function usePolling(
     window.addEventListener('focus', onVisible);
     return () => {
       window.clearInterval(id);
+      intervalRef.current = null;
+      window.removeEventListener('mbg:forbidden', onForbidden);
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', onVisible);
     };
-  }, [run, intervalMs]);
+  }, [run, intervalMs, stop]);
 
   const paused = options?.paused ?? false;
   useEffect(() => {

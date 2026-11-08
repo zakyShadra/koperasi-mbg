@@ -10,10 +10,16 @@ export const LOGO_URL = `${import.meta.env.BASE_URL}images/logo-koperasi.png`;
 
 export class ApiError extends Error {
   code: string;
-  constructor(code: string, message?: string) {
+  status: number | null;
+  constructor(code: string, message?: string, status?: number | null) {
     super(message ?? code);
     this.code = code;
+    this.status = status ?? null;
   }
+}
+
+export function isForbiddenError(e: unknown): boolean {
+  return e instanceof ApiError && (e.code === 'forbidden_role' || e.status === 403);
 }
 
 const ERROR_TEXT: Record<string, string> = {
@@ -44,6 +50,7 @@ const ERROR_TEXT: Record<string, string> = {
   mirror_butuh_tab_dan_rows: 'Mirror butuh tab dan baris.',
   mirror_gagal: 'Gagal menulis ke Sheet, coba lagi.',
   unauthorized: 'Sesi habis, masuk lagi.',
+  forbidden_role: 'Akses ditolak untuk peran ini.',
   route_tidak_dikenal: 'Alamat API tidak dikenal.',
 };
 
@@ -99,7 +106,10 @@ async function apiFetch<T>(
         window.location.href = loginPath;
       }
     }
-    throw new ApiError(data?.error ?? `http_${res.status}`, data?.message);
+    if (data?.error === 'forbidden_role') {
+      window.dispatchEvent(new CustomEvent('mbg:forbidden'));
+    }
+    throw new ApiError(data?.error ?? `http_${res.status}`, data?.message, res.status);
   }
   return data as T;
 }
