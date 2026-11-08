@@ -1,2 +1,99 @@
 /* Reset minimal. Semua gaya ada di styles/tokens.css dan
    styles/components.css. */
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --color-chart-line-primary: var(--chart-line-primary);
+    --color-chart-line-secondary: var(--chart-line-secondary);
+    --color-chart-brush-border: var(--chart-brush-border);
+    --color-chart-tooltip-background: var(--chart-tooltip-background);
+    --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+    --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+    --color-chart-scale-02: var(--chart-scale-02);
+    --color-chart-scale-03: var(--chart-scale-03);
+    --color-chart-scale-04: var(--chart-scale-04);
+    --color-chart-scale-05: var(--chart-scale-05);
+    --color-chart-segment-line: var(--chart-segment-line);
+    --color-chart-segment-background: var(--chart-segment-background);
+    --color-chart-marker-badge-foreground: var(--chart-marker-badge-foreground);
+    --color-chart-marker-badge-background: var(--chart-marker-badge-background);
+    --color-chart-indicator-secondary-color: var(--chart-indicator-secondary-color);
+    --color-chart-indicator-color: var(--chart-indicator-color);
+    --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+    --chart-scale-05: var(--chart-scale-05);
+    --chart-scale-04: var(--chart-scale-04);
+    --chart-scale-03: var(--chart-scale-03);
+    --chart-scale-02: var(--chart-scale-02);
+    --color-chart-scale-01: var(--chart-scale-01);
+    --color-chart-scale-mix: var(--chart-scale-mix);
+    --color-chart-label: var(--chart-label);
+    --color-chart-marker-foreground: var(--chart-marker-foreground);
+    --color-chart-marker-border: var(--chart-marker-border);
+    --color-chart-marker-background: var(--chart-marker-background);
+    --chart-tooltip-muted: var(--chart-tooltip-muted);
+    --chart-tooltip-foreground: var(--chart-tooltip-foreground);
+    --chart-tooltip-background: var(--chart-tooltip-background);
+    --chart-brush-border: var(--chart-brush-border);
+    --color-chart-grid: var(--chart-grid);
+    --color-chart-crosshair: var(--chart-crosshair);
+    --chart-line-secondary: var(--chart-line-secondary);
+    --chart-line-primary: var(--chart-line-primary);
+    --color-chart-foreground-muted: var(--chart-foreground-muted);
+    --color-chart-foreground: var(--chart-foreground);
+    --color-chart-background: var(--chart-background);
+    --color-chart-negative: var(--chart-negative);
+    --color-chart-positive: var(--chart-positive);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+}
+
+:root {
+    --background: #0a0f0d;
+    --foreground: #f4f7f5;
+    --border: rgba(255, 255, 255, 0.14);
+    --popover: #141c19;
+    --popover-foreground: #f4f7f5;
+    --muted-foreground: #a8b5af;
+    --chart-1: #2dd4bf;
+    --chart-2: #fbbf24;
+    --chart-3: #fb923c;
+    --chart-4: #a8b5af;
+    --chart-5: #34d399;
+    --chart-positive: #34d399;
+    --chart-negative: #f87171;
+    --chart-background: transparent;
+    --chart-foreground: #f4f7f5;
+    --chart-foreground-muted: #a8b5af;
+    --chart-line-primary: #2dd4bf;
+    --chart-line-secondary: #fbbf24;
+    --chart-crosshair: rgba(255, 255, 255, 0.35);
+    --chart-grid: rgba(255, 255, 255, 0.08);
+    --chart-brush-border: rgba(255, 255, 255, 0.14);
+    --chart-tooltip-background: #141c19;
+    --chart-tooltip-foreground: #f4f7f5;
+    --chart-tooltip-muted: #a8b5af;
+    --chart-marker-background: #141c19;
+    --chart-marker-border: rgba(255, 255, 255, 0.25);
+    --chart-marker-foreground: #f4f7f5;
+    --chart-label: #a8b5af;
+    --chart-scale-mix: #141c19;
+    --chart-scale-01: rgba(255, 255, 255, 0.08);
+    --chart-scale-02: color-mix(in oklab, var(--chart-1) 35%, var(--chart-scale-mix));
+    --chart-scale-03: color-mix(in oklab, var(--chart-1) 55%, var(--chart-scale-mix));
+    --chart-scale-04: color-mix(in oklab, var(--chart-1) 78%, var(--chart-scale-mix));
+    --chart-scale-05: var(--chart-1);
+    --chart-scale-pattern-color: #141c19;
+    --chart-indicator-color: #f4f7f5;
+    --chart-indicator-secondary-color: #141c19;
+    --chart-marker-badge-background: #f4f7f5;
+    --chart-marker-badge-foreground: #141c19;
+    --chart-segment-background: rgba(255, 255, 255, 0.06);
+    --chart-segment-line: rgba(255, 255, 255, 0.25);
+}

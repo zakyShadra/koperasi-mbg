@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { BarSparkline, useSparklineHover } from './charts/sparkline';
 import { fmtRp } from '../lib/format';
 
 export interface FlyoutBar {
@@ -27,12 +28,10 @@ function formatValue(n: number, kind: 'rp' | 'number'): string {
   return kind === 'rp' ? fmtRp(n) : n.toLocaleString('id-ID');
 }
 
-// Kartu preview melayang di samping sidebar: total yang menghitung naik,
-// perbandingan periode, grafik batang yang tumbuh, tooltip per batang.
 export function FlyoutCard({ data }: { data: FlyoutData }) {
   const [shown, setShown] = useState(0);
-  const [hovered, setHovered] = useState<number | null>(null);
   const rafRef = useRef(0);
+  const hover = useSparklineHover<FlyoutBar>();
 
   useEffect(() => {
     const start = performance.now();
@@ -47,7 +46,7 @@ export function FlyoutCard({ data }: { data: FlyoutData }) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [data.total]);
 
-  const max = Math.max(...data.bars.map((b) => b.value), 1);
+  const hovered = hover.datum;
 
   return (
     <div className="flyout-card" role="status">
@@ -61,31 +60,26 @@ export function FlyoutCard({ data }: { data: FlyoutData }) {
         {data.delta}
       </p>
       <div className="flyout-card__chart" aria-label={data.barsLabel}>
-        {data.bars.map((bar, i) => (
-          <div
-            key={bar.label}
-            className="flyout-bar"
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}
-            onFocus={() => setHovered(i)}
-            onBlur={() => setHovered(null)}
-            tabIndex={0}
-          >
-            <div
-              className={`flyout-bar__fill${i === data.bars.length - 1 ? ' is-last' : ''}`}
-              style={{
-                height: `${Math.max((bar.value / max) * 100, 6)}%`,
-                animationDelay: `${i * 40}ms`,
-              }}
-            />
-            <span className="flyout-bar__label">{bar.label}</span>
-            {hovered === i && (
-              <span className="flyout-bar__tip">
-                {bar.label}: {data.totalKind === 'rp' ? fmtShortRp(bar.value) : bar.value.toLocaleString('id-ID')}
-              </span>
-            )}
-          </div>
-        ))}
+        <p className="flyout-card__tip">
+          {hovered
+            ? `${hovered.label}: ${data.totalKind === 'rp' ? fmtShortRp(hovered.value) : hovered.value.toLocaleString('id-ID')}`
+            : data.barsLabel}
+        </p>
+        <BarSparkline
+          data={data.bars}
+          dataKey="value"
+          color="#2dd4bf"
+          height={56}
+          barGap={4}
+          barRadius={3}
+          aria-label={data.barsLabel}
+          {...hover.sparklineProps}
+        />
+        <div className="flyout-card__labels">
+          {data.bars.map((bar) => (
+            <span key={bar.label}>{bar.label}</span>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import StatCard from '../components/StatCard';
-import BarChart from '../components/BarChart';
+import { OmzetBarChart } from '../components/MbgCharts';
 import OrderTable from '../components/OrderTable';
 import View from '../components/View';
 import { managerStats, omzet7Hari, recentOrders } from '../lib/dummy';
@@ -36,7 +36,7 @@ const MANAGER_ICONS: ReactNode[] = [
 
 export default function Manager() {
   const chartData = useMemo(
-    () => omzet7Hari.map((d) => ({ label: d.day, value: d.value })),
+    () => omzet7Hari.map((d) => ({ day: d.day, value: d.value })),
     [],
   );
   const totalOmzet = useMemo(() => omzet7Hari.reduce((sum, d) => sum + d.value, 0), []);
@@ -71,7 +71,7 @@ export default function Manager() {
               <h2>Omzet 7 hari terakhir</h2>
               <span className="card-total">{fmtRp(totalOmzet)}</span>
             </div>
-            <BarChart data={chartData} highlightIndex={maxIndex} />
+            <OmzetBarChart data={chartData} />
             <p className="card-foot">Total 7 hari: {fmtRp(totalOmzet)}. Hari tertinggi: {omzet7Hari[maxIndex].day}.</p>
           </GlassCard>
           <GlassCard className="manager-links stagger" style={{ '--d': '250ms' } as CSSProperties}>

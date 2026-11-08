@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import StatCard from '../components/StatCard';
-import DonutChart from '../components/DonutChart';
+import { CashFlowChart, CategoryDonut } from '../components/MbgCharts';
 import View from '../components/View';
 import { TRANSACTION_CATEGORIES } from '../features/finance/TransactionForm';
 import { parseTxDate, useTransactions } from '../features/finance/transactions-store';
@@ -40,6 +40,24 @@ export default function Finance() {
     [],
   );
   const txs = useTransactions();
+  const cashByDay = useMemo(() => {
+    const grouped = new Map<string, { day: string; masuk: number; keluar: number; sort: number }>();
+    for (const t of txs) {
+      const ts = parseTxDate(t.date);
+      const row = grouped.get(t.date) ?? {
+        day: new Date(ts).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+        masuk: 0,
+        keluar: 0,
+        sort: ts,
+      };
+      row.masuk += t.masuk;
+      row.keluar += t.keluar;
+      grouped.set(t.date, row);
+    }
+    return [...grouped.values()]
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ day, masuk, keluar }) => ({ day, masuk, keluar }));
+  }, [txs]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -216,9 +234,18 @@ export default function Finance() {
             <div className="card-head">
               <h2>Rekap per kategori</h2>
             </div>
-            <DonutChart data={donutData} />
+            <CategoryDonut data={donutData} />
           </GlassCard>
         </section>
+
+        <GlassCard className="cash-card stagger" style={{ '--d': '300ms' } as CSSProperties}>
+          <div className="card-head">
+            <h2>Arus kas per hari</h2>
+            <span className="card-count">{cashByDay.length} hari</span>
+          </div>
+          <CashFlowChart data={cashByDay} />
+          <p className="card-foot">Kas masuk vs kas keluar per hari, dari transaksi tercatat.</p>
+        </GlassCard>
       </div>
     </View>
   );

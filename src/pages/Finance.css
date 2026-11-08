@@ -51,7 +51,8 @@
 }
 
 .tx-card,
-.donut-card {
+.donut-card,
+.cash-card {
   min-width: 0;
 }
 

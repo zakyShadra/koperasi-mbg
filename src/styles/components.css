@@ -581,81 +581,53 @@ input:focus-visible,
 
 /* ---------- Charts ---------- */
 
-@keyframes bar-grow {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-
-.bar-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 180px;
-  padding-top: 24px;
-}
-
-.bar-chart__col {
-  flex: 1;
+.donut-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-  height: 100%;
+  gap: 16px;
 }
 
-.bar-chart__value {
-  font-size: var(--small-size);
-  color: var(--muted);
+.donut-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.donut-center__value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.bar-chart__bar {
-  width: 100%;
-  max-width: 44px;
-  border-radius: 6px 6px 2px 2px;
-  background: var(--accent-teal);
-  transform-origin: bottom;
-  animation: bar-grow 500ms var(--ease-out) both;
-}
-
-.bar-chart__bar--highlight {
-  background: var(--accent-peach);
-}
-
-.bar-chart__label {
+.donut-center__label {
   font-size: var(--small-size);
   color: var(--muted);
 }
 
-@keyframes donut-sweep {
-  from {
-    stroke-dasharray: 0 100;
-  }
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: var(--small-size);
+  color: var(--muted);
 }
 
-.donut-chart {
+.chart-legend span {
   display: flex;
   align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.donut-chart__svg {
-  flex-shrink: 0;
-  transform: rotate(-90deg);
-}
-
-.donut-chart__seg {
-  fill: none;
-  stroke-width: 22;
-  animation: donut-sweep 700ms var(--ease-out) both;
+.chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
 }
 
 .donut-legend {
@@ -989,9 +961,7 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .view-enter,
   .stagger,
-  .login-step,
-  .bar-chart__bar,
-  .donut-chart__seg {
+  .login-step {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
