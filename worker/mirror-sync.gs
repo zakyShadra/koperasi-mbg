@@ -11,7 +11,7 @@
 // (GAS -> Worker, header X-Sheet-Sync-Secret). Keduanya diset sebagai
 // Script properties, jangan pernah ditulis di kode.
 
-var WORKER_URL = 'https://koperasi-mbg-api.zakyshadra.workers.dev';
+var WORKER_URL = 'https://koperasimbg.ices.my.id';
 var PROP_SECRET = 'MIRROR_SECRET';
 var PROP_SYNC_SECRET = 'SYNC_SECRET';
 var LOCK_TTL_SECONDS = 120;
@@ -26,6 +26,12 @@ var KEY_COLS = {
   'Staf': ['email'],
   'Laporan': ['jenis', 'periode_mulai', 'periode_selesai', 'dibuat_oleh']
 };
+
+var SHEET_ID = '1YLyLFdnuJ9P8rVuXAGMceX8C7SUCXesScCdxTu1Mu6k';
+
+function ss_() {
+  return SpreadsheetApp.openById(SHEET_ID);
+}
 
 function doGet() {
   return json_({ ok: true, service: 'koperasi-mbg-sync' });
@@ -49,7 +55,7 @@ function doPost(e) {
 
 function dump_(tab) {
   if (!KEY_COLS[tab]) return json_({ ok: false, error: 'tab tidak dikenal' });
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(tab);
+  var sheet = ss_().getSheetByName(tab);
   if (!sheet) return json_({ ok: false, error: 'tab tidak ada' });
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
@@ -65,7 +71,7 @@ function dump_(tab) {
 function append_(data) {
   var tab = data.tab;
   if (!KEY_COLS[tab]) return json_({ ok: false, error: 'tab tidak dikenal' });
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(tab);
+  var sheet = ss_().getSheetByName(tab);
   if (!sheet) return json_({ ok: false, error: 'tab tidak ada' });
   var rows = data.rows || [];
   if (!rows.length) return json_({ ok: true, tab: tab, appended: 0 });
@@ -79,7 +85,7 @@ function append_(data) {
 function upsert_(data) {
   var tab = data.tab;
   if (!KEY_COLS[tab]) return json_({ ok: false, error: 'tab tidak dikenal' });
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(tab);
+  var sheet = ss_().getSheetByName(tab);
   if (!sheet) return json_({ ok: false, error: 'tab tidak ada' });
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
   var idx = {};
@@ -193,12 +199,19 @@ function onSheetEdit(e) {
   }
 }
 
+function setSyncSecrets_(mirrorSecret, syncSecret) {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty(PROP_SECRET, mirrorSecret);
+  props.setProperty(PROP_SYNC_SECRET, syncSecret);
+  return { mirror_set: !!props.getProperty(PROP_SECRET), sync_set: !!props.getProperty(PROP_SYNC_SECRET) };
+}
+
 function setupSync() {
   var triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(function (t) {
     if (t.getHandlerFunction() === 'onSheetEdit') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('onSheetEdit').forSpreadsheet(SpreadsheetApp.getActive()).onEdit().create();
+  ScriptApp.newTrigger('onSheetEdit').forSpreadsheet(ss_()).onEdit().create();
   var props = PropertiesService.getScriptProperties();
   Logger.log('Trigger onSheetEdit terpasang. MIRROR_SECRET terisi: ' + !!props.getProperty(PROP_SECRET) + ', SYNC_SECRET terisi: ' + !!props.getProperty(PROP_SYNC_SECRET));
 }
