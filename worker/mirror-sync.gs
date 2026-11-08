@@ -5,8 +5,11 @@
 // berubah ke Worker. Yang paling baru menang berdasarkan diubah_pada.
 // Pantulan tidak mungkin jadi loop: baris yang memantul punya diubah_pada
 // yang sama dengan yang sudah ada, jadi perbandingan menganggapnya seri
-// dan tidak menulis apa-apa. Kunci CacheService hanya penghemat (supaya
-// pantulan tidak sampai dikirim ke Worker).
+// dan tidak menulis apa-apa. Kunci CacheService hanya penanda tulis mirror,
+// bukan penghalang edit user: edit user selalu dikirim, Worker yang
+// memutuskan lewat diubah_pada. Dulu lock 120 detik malah menelan edit
+// user kedua pada baris yang sama (18:53, 2026-11-08), jadi lock tidak
+// lagi dipakai untuk melewati edit.
 // Secret: MIRROR_SECRET (Worker -> GAS, di dalam body JSON) dan SYNC_SECRET
 // (GAS -> Worker, header X-Sheet-Sync-Secret). Keduanya diset sebagai
 // Script properties, jangan pernah ditulis di kode.
@@ -14,7 +17,7 @@
 var WORKER_URL = 'https://koperasimbg.ices.my.id';
 var PROP_SECRET = 'MIRROR_SECRET';
 var PROP_SYNC_SECRET = 'SYNC_SECRET';
-var LOCK_TTL_SECONDS = 120;
+var LOCK_TTL_SECONDS = 30;
 
 var KEY_COLS = {
   'Anggota': ['id'],
@@ -169,6 +172,7 @@ function onSheetEdit(e) {
     var tab = sheet.getName();
     if (!KEY_COLS[tab]) return;
     if (tab === 'Staf') return;
+    Logger.log('onSheetEdit ' + tab + ' baris ' + range.getRow() + '-' + range.getLastRow());
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
     var idx = {};
     headers.forEach(function (h, i) { idx[h] = i; });
@@ -189,7 +193,7 @@ function onSheetEdit(e) {
       var empty = Object.keys(obj).every(function (k) { return obj[k] === '' || obj[k] === null; });
       if (empty) continue;
       if (String(obj['sumber'] || '') === 'contoh') continue;
-      if (hasLock_(tab, key)) continue;
+      if (hasLock_(tab, key)) Logger.log('onSheetEdit ' + tab + ' ' + key + ': lock lama ada, tetap kirim.');
       sheet.getRange(r, tsCol + 1).setValue(now);
       obj['diubah_pada'] = now;
       setLock_(tab, key, now);
@@ -202,13 +206,25 @@ function onSheetEdit(e) {
       Logger.log('SYNC_SECRET belum diset, perubahan tidak dikirim ke Worker.');
       return;
     }
-    var res = UrlFetchApp.fetch(WORKER_URL + '/api/sheet-sync', {
-      method: 'post',
-      contentType: 'application/json',
-      headers: { 'X-Sheet-Sync-Secret': syncSecret },
-      payload: JSON.stringify({ tab: tab, rows: rows, rowNums: rowNums }),
-      muteHttpExceptions: true
-    });
+    var res = null;
+    for (var attempt = 0; attempt < 2 && !res; attempt++) {
+      try {
+        res = UrlFetchApp.fetch(WORKER_URL + '/api/sheet-sync', {
+          method: 'post',
+          contentType: 'application/json',
+          headers: { 'X-Sheet-Sync-Secret': syncSecret },
+          payload: JSON.stringify({ tab: tab, rows: rows, rowNums: rowNums }),
+          muteHttpExceptions: true
+        });
+      } catch (err) {
+        Logger.log('sheet-sync ' + tab + ' percobaan ' + (attempt + 1) + ' gagal: ' + String(err));
+        Utilities.sleep(1000);
+      }
+    }
+    if (!res) {
+      Logger.log('sheet-sync ' + tab + ': POST gagal 2x, ' + rows.length + ' baris tidak terkirim.');
+      return;
+    }
     Logger.log('sheet-sync ' + tab + ': ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 300));
   } catch (err) {
     Logger.log('onSheetEdit error: ' + String(err));
