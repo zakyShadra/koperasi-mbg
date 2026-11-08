@@ -31,15 +31,15 @@ mengubah kode.
 | Pisang Goreng (w7) | pisang-goreng.jpg | Pexels, photo 37048406 |
 | Es Kopi Susu (w8) | es-kopi-susu.jpg | Pexels, photo 8271020 |
 
-## Logo (placeholder)
+## Logo
 
 | Keperluan | File | Sumber |
 | --- | --- | --- |
-| Logo sementara | logo-placeholder.jpg | Pexels, photo 29527493 (foto cangkir biji kopi) |
+| Logo resmi | logo-koperasi.png | Lambang Koperasi Indonesia (dikirim Zaky, background dibuat transparan) |
+| Logo sementara (tidak dipakai lagi) | logo-placeholder.jpg | Pexels, photo 29527493 (foto cangkir biji kopi) |
 
-Logo asli masih didesain oleh teman Zaky. Kalau logo asli sudah jadi, timpa
-file logo-placeholder.jpg dengan file logo asli (atau ganti nama file yang
-dipakai di kode).
+Logo dipakai di sidebar staff, top bar pelanggan, halaman login, dan favicon
+(`LOGO_URL` di `src/lib/api.ts`).
 
 ## Catatan sumber
 

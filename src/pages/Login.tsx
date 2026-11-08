@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { requestOtp, verifyOtp } from '../lib/api';
+import { LOGO_URL, requestOtp, verifyOtp } from '../lib/api';
 import { getSession } from '../lib/auth-session';
 
 const ROLE_HOME: Record<string, string> = {
@@ -156,6 +156,7 @@ export default function Login() {
     <div className="login-wrap">
       <div className="glass-card login-card">
         <div className="login-seam" aria-hidden="true" />
+        <img className="login-logo" src={LOGO_URL} alt="Logo Koperasi MBG" />
         <div className="login-step" key={step}>
           {step === 1 ? (
             <>

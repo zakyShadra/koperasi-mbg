@@ -750,19 +750,13 @@ input:focus-visible,
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--accent-teal);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
   overflow: hidden;
 }
 
 .topbar__logo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -828,6 +822,14 @@ input:focus-visible,
   margin: -24px -24px 24px;
   background: linear-gradient(90deg, var(--accent-teal), var(--accent-peach));
   clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%);
+}
+
+.login-logo {
+  display: block;
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  margin: 0 auto 16px;
 }
 
 .login-step {

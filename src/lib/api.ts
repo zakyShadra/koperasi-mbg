@@ -6,7 +6,7 @@ import { appBase } from './app-base';
 export const API_BASE = 'https://koperasimbg.ices.my.id';
 export const SHEET_URL =
   'https://docs.google.com/spreadsheets/d/1YLyLFdnuJ9P8rVuXAGMceX8C7SUCXesScCdxTu1Mu6k/edit';
-export const LOGO_URL = `${import.meta.env.BASE_URL}images/logo-placeholder.jpg`;
+export const LOGO_URL = `${import.meta.env.BASE_URL}images/logo-koperasi.png`;
 
 export class ApiError extends Error {
   code: string;
