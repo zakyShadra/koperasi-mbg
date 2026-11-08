@@ -98,9 +98,11 @@ async function gasPost(env: SyncEnv, body: Record<string, unknown>): Promise<Rec
     try {
       return JSON.parse(text) as Record<string, unknown>;
     } catch {
+      console.error("gasPost non-JSON response:", res.status, text.slice(0, 200));
       return null;
     }
-  } catch {
+  } catch (e) {
+    console.error("gasPost fetch error:", String(e), env.GAS_MIRROR_URL);
     return null;
   }
 }
