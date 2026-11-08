@@ -60,7 +60,7 @@ function Layout() {
 
 export default function AppRouter() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/koperasi-mbg">
       <Layout />
     </BrowserRouter>
   );
