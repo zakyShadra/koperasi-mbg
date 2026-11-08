@@ -18,12 +18,6 @@ export interface FlyoutData {
   barsLabel: string;
 }
 
-function fmtShortRp(n: number): string {
-  const jt = n / 1000000;
-  if (jt >= 1) return `Rp ${jt.toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`;
-  return fmtRp(n);
-}
-
 function formatValue(n: number, kind: 'rp' | 'number'): string {
   return kind === 'rp' ? fmtRp(n) : n.toLocaleString('id-ID');
 }
@@ -62,7 +56,7 @@ export function FlyoutCard({ data }: { data: FlyoutData }) {
       <div className="flyout-card__chart" aria-label={data.barsLabel}>
         <p className="flyout-card__tip">
           {hovered
-            ? `${hovered.label}: ${data.totalKind === 'rp' ? fmtShortRp(hovered.value) : hovered.value.toLocaleString('id-ID')}`
+            ? `${hovered.label}: ${data.totalKind === 'rp' ? fmtRp(hovered.value) : hovered.value.toLocaleString('id-ID')}`
             : data.barsLabel}
         </p>
         <BarSparkline

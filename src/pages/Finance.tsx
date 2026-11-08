@@ -163,9 +163,9 @@ export default function Finance() {
         t.date,
         t.note,
         t.category,
-        String(t.masuk),
-        String(t.keluar),
-        String(balanceById.get(t.id) ?? 0),
+        fmtRp(t.masuk),
+        fmtRp(t.keluar),
+        fmtRp(balanceById.get(t.id) ?? 0),
       ]);
     const csv = [header, ...rows].map((r) => r.map(csvEscape).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });

@@ -15,10 +15,6 @@ import { fmtRp } from '../lib/format';
 const TEAL = '#2dd4bf';
 const ORANGE = '#fb923c';
 
-function fmtShort(n: number): string {
-  return `Rp ${(n / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`;
-}
-
 export interface OmzetPoint {
   day: string;
   value: number;
@@ -38,14 +34,12 @@ export function OmzetBarChart({ data }: { data: OmzetPoint[] }) {
         dataKey="value"
         fill={TEAL}
         showValue
-        valueLabelFormatter={(v) =>
-          `${(v / 1000000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} jt`
-        }
+        valueLabelFormatter={(v) => fmtRp(v)}
       />
       <BarXAxis showAllLabels />
       <ChartTooltip
         rows={(point) => [
-          { color: TEAL, label: 'Omzet', value: fmtShort(Number(point.value)) },
+          { color: TEAL, label: 'Omzet', value: fmtRp(Number(point.value)) },
         ]}
       />
     </BarChart>
@@ -109,7 +103,7 @@ export function CategoryDonut({ data }: { data: CategoryPoint[] }) {
         <PieCenter defaultLabel="Total">
           {({ value, label }) => (
             <span className="donut-center">
-              <span className="donut-center__value">{fmtShort(value)}</span>
+              <span className="donut-center__value">{fmtRp(value)}</span>
               <span className="donut-center__label">{label}</span>
             </span>
           )}
@@ -151,7 +145,7 @@ export function OmzetAreaChart({ data }: { data: TrendPoint[] }) {
         showDatePill={false}
         dateLabels={labels}
         rows={(point) => [
-          { color: TEAL, label: 'Omzet', value: fmtShort(Number(point.value)) },
+          { color: TEAL, label: 'Omzet', value: fmtRp(Number(point.value)) },
         ]}
       />
     </AreaChart>
