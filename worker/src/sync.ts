@@ -388,6 +388,10 @@ export async function applySheetRow(
   }
   const ts = normTs(row.diubah_pada) || wibNow();
   const missingKey = KEY_COLS[tab].some((c) => str(row[c]) === "");
+  if (tab === "Staf") {
+    await logSync(env, "sheet_ke_worker", tab, key, "error", "Staf hanya dikelola bot, baris Sheet ditolak dan tidak masuk D1.");
+    return { result: "error", detail: "Staf hanya dikelola bot, baris Sheet ditolak", key };
+  }
   try {
     if (tab === "Anggota") return await applyAnggota(env, row, key, ts, missingKey, rowNum);
     if (tab === "Kategori") return await applyKategori(env, row, key, ts, missingKey, rowNum);
@@ -395,7 +399,6 @@ export async function applySheetRow(
     if (tab === "Pesanan") return await applyPesanan(env, row, key, ts, missingKey);
     if (tab === "Pesanan Item") return await applyPesananItem(env, row, key, ts, missingKey);
     if (tab === "Transaksi") return await applyTransaksi(env, row, key, ts, missingKey, rowNum);
-    if (tab === "Staf") return await applyStaf(env, row, key, ts, missingKey);
     return await applyLaporan(env, row, key, ts);
   } catch (e) {
     await logSync(env, "sheet_ke_worker", tab, key, "error", String(e));
@@ -594,33 +597,6 @@ async function applyTransaksi(env: SyncEnv, row: Record<string, unknown>, key: s
   await logSync(env, "sheet_ke_worker", "Transaksi", kode, "upsert", generated ? "insert, kode dibuat otomatis" : existing ? "update" : "insert");
   return { result: "applied", detail: generated ? "insert, kode dibuat otomatis" : existing ? "update" : "insert", key: kode,
     mirror: generated ? { tab: "Transaksi", id: trxId, rowNum } : null };
-}
-
-async function applyStaf(env: SyncEnv, row: Record<string, unknown>, key: string, ts: string, missingKey: boolean): Promise<ApplyResult> {
-  if (missingKey) return { result: "error", detail: "email wajib diisi", key };
-  const email = str(row.email).toLowerCase();
-  const nama = str(row.nama);
-  const peran = str(row.peran);
-  if (!nama || !["manager", "finance", "barista"].includes(peran)) {
-    return { result: "error", detail: "nama dan peran manager/finance/barista wajib diisi", key: email };
-  }
-  const isAktif = bool01(row.aktif);
-  const existing = await env.DB.prepare("SELECT id, diubah_pada FROM staf WHERE email = ?").bind(email).first<{ id: number; diubah_pada: string }>();
-  if (existing && cmpTs(ts, existing.diubah_pada) <= 0) {
-    await logSync(env, "sheet_ke_worker", "Staf", email, "lewat_konflik", `D1 lebih baru (${existing.diubah_pada}).`);
-    return { result: "skipped_conflict", detail: "D1 lebih baru", key: email };
-  }
-  if (existing) {
-    await env.DB.prepare("UPDATE staf SET nama = ?, no_wa = ?, peran = ?, is_aktif = ?, diubah_pada = ? WHERE id = ?")
-      .bind(nama, normWa(row.no_wa) || null, peran, isAktif, ts, existing.id).run();
-    await logSync(env, "sheet_ke_worker", "Staf", email, "upsert", "update");
-    return { result: "applied", detail: "update", key: email };
-  }
-  const kode = await nextKode(env, "staf", "STF-", 3);
-  await env.DB.prepare("INSERT INTO staf (kode, nama, email, no_wa, peran, is_aktif, diubah_pada) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .bind(kode, nama, email, normWa(row.no_wa) || null, peran, isAktif, ts).run();
-  await logSync(env, "sheet_ke_worker", "Staf", email, "upsert", "insert");
-  return { result: "applied", detail: "insert", key: email };
 }
 
 async function applyLaporan(env: SyncEnv, row: Record<string, unknown>, key: string, ts: string): Promise<ApplyResult> {

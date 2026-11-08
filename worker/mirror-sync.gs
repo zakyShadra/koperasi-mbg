@@ -153,6 +153,7 @@ function onSheetEdit(e) {
     var sheet = range.getSheet();
     var tab = sheet.getName();
     if (!KEY_COLS[tab]) return;
+    if (tab === 'Staf') return;
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
     var idx = {};
     headers.forEach(function (h, i) { idx[h] = i; });
