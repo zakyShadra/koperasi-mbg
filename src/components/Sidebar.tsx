@@ -2,17 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { getSession, clearSession } from '../lib/auth-session';
-import {
-  categorySummary,
-  omzet7Hari,
-  productsKoperasi,
-  productsWarkop,
-  recentOrders,
-  warkopCatalog,
-} from '../lib/dummy';
 import { useCart } from '../features/pelanggan/cart-context';
-import { useTransactions } from '../features/finance/transactions-store';
-import { useBaristaOrders } from '../features/barista/barista-store';
 import { FlyoutCard } from './FlyoutCard';
 import type { FlyoutData } from './FlyoutCard';
 import {
@@ -29,6 +19,18 @@ import {
   IconUsers,
   IconWallet,
 } from './icons';
+import {
+  LOGO_URL,
+  getCashReport,
+  getCatalog,
+  getOmzetReport,
+  getOrders,
+  getQueue,
+  getStats,
+  getTransactions,
+  logoutApi,
+} from '../lib/api';
+import { fillDaily, fmtRp, rangeDays, weekdayShort } from '../lib/format';
 import './Sidebar.css';
 
 interface SubItem {
@@ -49,6 +51,27 @@ interface MenuItem {
 
 type RoleKey = 'manager' | 'finance' | 'barista' | 'guest';
 
+interface SidebarStats {
+  catalogTotal: number;
+  koperasiCount: number;
+  warkopCount: number;
+  koperasiStock: number;
+  warkopStock: number;
+  omzetHariIni: number;
+  omzet7: { label: string; value: number }[];
+  omzet7Total: number;
+  pesananHariIni: number;
+  statusCounts: Record<string, number>;
+  saldo: number;
+  masukBulanIni: number;
+  categoryTotals: { label: string; value: number }[];
+  txCount: number;
+  txCategoryCounts: Record<string, number>;
+  queueTotal: number;
+  queueCounts: Record<string, number>;
+  draftCount: number;
+}
+
 function countBy<T>(items: T[], key: (item: T) => string): Record<string, number> {
   const map: Record<string, number> = {};
   for (const item of items) {
@@ -58,100 +81,249 @@ function countBy<T>(items: T[], key: (item: T) => string): Record<string, number
   return map;
 }
 
-function orderStatusCounts() {
-  return countBy(recentOrders, (o) => o.status);
+const STATUS_LABEL_ID: Record<string, string> = {
+  baru: 'Baru',
+  disiapkan: 'Disiapkan',
+  siap: 'Siap',
+  selesai: 'Selesai',
+  dibatalkan: 'Dibatalkan',
+};
+
+function useSidebarStats(role: RoleKey): SidebarStats | null {
+  const [stats, setStats] = useState<SidebarStats | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        if (role === 'guest') {
+          const products = await getCatalog();
+          const koperasi = products.filter((p) => p.kategori === 'Barang Koperasi');
+          const warkop = products.filter((p) => p.kategori === 'Warkop');
+          if (cancelled) return;
+          setStats({
+            catalogTotal: products.length,
+            koperasiCount: koperasi.length,
+            warkopCount: warkop.length,
+            koperasiStock: koperasi.reduce((s, p) => s + p.stok, 0),
+            warkopStock: warkop.reduce((s, p) => s + p.stok, 0),
+            omzetHariIni: 0,
+            omzet7: [],
+            omzet7Total: 0,
+            pesananHariIni: 0,
+            statusCounts: {},
+            saldo: 0,
+            masukBulanIni: 0,
+            categoryTotals: [],
+            txCount: 0,
+            txCategoryCounts: {},
+            queueTotal: 0,
+            queueCounts: {},
+            draftCount: 0,
+          });
+          return;
+        }
+        if (role === 'manager') {
+          const { from, to } = rangeDays(7);
+          const [s, report, orders] = await Promise.all([
+            getStats(),
+            getOmzetReport(from, to),
+            getOrders(undefined, 200),
+          ]);
+          if (cancelled) return;
+          const daily = fillDaily(from, to, report.daily);
+          setStats({
+            catalogTotal: 0,
+            koperasiCount: 0,
+            warkopCount: 0,
+            koperasiStock: 0,
+            warkopStock: 0,
+            omzetHariIni: s.omzet_hari_ini,
+            omzet7: daily.map((d) => ({ label: weekdayShort(d.tanggal), value: d.omzet })),
+            omzet7Total: report.total.omzet,
+            pesananHariIni: s.pesanan_hari_ini,
+            statusCounts: countBy(orders, (o) => STATUS_LABEL_ID[o.status] ?? o.status),
+            saldo: 0,
+            masukBulanIni: 0,
+            categoryTotals: [],
+            txCount: 0,
+            txCategoryCounts: {},
+            queueTotal: 0,
+            queueCounts: {},
+            draftCount: 0,
+          });
+          return;
+        }
+        if (role === 'finance') {
+          const today = rangeDays(1).to;
+          const monthStart = `${today.slice(0, 8)}01`;
+          const [report, txs] = await Promise.all([
+            getCashReport(monthStart, today),
+            getTransactions(),
+          ]);
+          if (cancelled) return;
+          const byCategory = new Map<string, number>();
+          for (const row of report.per_kategori) {
+            const key = row.kategori ?? 'Lainnya';
+            byCategory.set(key, (byCategory.get(key) ?? 0) + row.jumlah);
+          }
+          setStats({
+            catalogTotal: 0,
+            koperasiCount: 0,
+            warkopCount: 0,
+            koperasiStock: 0,
+            warkopStock: 0,
+            omzetHariIni: 0,
+            omzet7: [],
+            omzet7Total: 0,
+            pesananHariIni: 0,
+            statusCounts: {},
+            saldo: report.saldo,
+            masukBulanIni: report.masuk,
+            categoryTotals: [...byCategory.entries()].map(([label, value]) => ({ label, value })),
+            txCount: txs.length,
+            txCategoryCounts: countBy(txs, (t) => t.kategori ?? 'Lainnya'),
+            queueTotal: 0,
+            queueCounts: {},
+            draftCount: 0,
+          });
+          return;
+        }
+        const [queue, products] = await Promise.all([getQueue(), getCatalog()]);
+        if (cancelled) return;
+        const warkop = products.filter((p) => p.kategori === 'Warkop');
+        setStats({
+          catalogTotal: 0,
+          koperasiCount: 0,
+          warkopCount: warkop.length,
+          koperasiStock: 0,
+          warkopStock: 0,
+          omzetHariIni: 0,
+          omzet7: [],
+          omzet7Total: 0,
+          pesananHariIni: 0,
+          statusCounts: {},
+          saldo: 0,
+          masukBulanIni: 0,
+          categoryTotals: [],
+          txCount: 0,
+          txCategoryCounts: {},
+          queueTotal: queue.length,
+          queueCounts: countBy(queue, (o) => STATUS_LABEL_ID[o.status] ?? o.status),
+          draftCount: queue.filter((o) => o.is_draft === 1).length,
+        });
+      } catch {
+        // Angka sidebar boleh kosong, halaman tetap jalan.
+      }
+    };
+    void load();
+    const id = window.setInterval(() => void load(), 60000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [role]);
+
+  return stats;
 }
 
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  // Sesi dibaca tiap render, bukan sekali di useState: Sidebar tidak
-  // pernah remount saat login client-side, jadi state awal akan basi
-  // dan menu tamu tetap tampil setelah staff login.
   const session = getSession();
   const [pinned, setPinned] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [flyoutId, setFlyoutId] = useState<string | null>(null);
   const { count: cartCount } = useCart();
-  const txs = useTransactions();
-  const baristaOrders = useBaristaOrders();
 
   const expanded = pinned || hovering;
   const role: RoleKey = session ? session.role : 'guest';
+  const stats = useSidebarStats(role);
 
-  // Ganti role: tutup submenu dan kartu preview dari role sebelumnya.
   useEffect(() => {
     setOpenGroup(null);
     setFlyoutId(null);
   }, [role]);
-  const statusCounts = orderStatusCounts();
-  const txCategoryCounts = countBy(txs, (t) => t.category);
-  const baristaCounts = countBy(baristaOrders, (o) => o.status);
-  const koperasiStock = productsKoperasi.reduce((s, p) => s + p.stock, 0);
-  const warkopStock = productsWarkop.reduce((s, p) => s + p.stock, 0);
 
-  const omzetFlyout: FlyoutData = {
-    title: 'Omzet hari ini',
-    total: 1000000,
-    totalKind: 'rp',
-    delta: '33,3% vs Sabtu',
-    deltaTone: 'down',
-    bars: omzet7Hari.map((d) => ({ label: d.day, value: d.value })),
-    barsLabel: 'Omzet 7 hari terakhir',
-  };
+  const statusCounts = stats?.statusCounts ?? {};
+  const txCategoryCounts = stats?.txCategoryCounts ?? {};
+  const baristaCounts = stats?.queueCounts ?? {};
 
-  const pesananFlyout: FlyoutData = {
-    title: 'Pesanan hari ini',
-    total: 24,
-    totalKind: 'number',
-    totalSuffix: 'pesanan',
-    delta: '4 pesanan vs kemarin',
-    deltaTone: 'up',
-    bars: ['Baru', 'Disiapkan', 'Siap', 'Selesai'].map((s) => ({
-      label: s,
-      value: statusCounts[s] ?? 0,
-    })),
-    barsLabel: 'Pesanan per status',
-  };
+  const omzetFlyout: FlyoutData | undefined = stats
+    ? {
+        title: 'Omzet hari ini',
+        total: stats.omzetHariIni,
+        totalKind: 'rp',
+        delta: `Total 7 hari ${fmtRp(stats.omzet7Total)}`,
+        deltaTone: 'flat',
+        bars: stats.omzet7,
+        barsLabel: 'Omzet 7 hari terakhir',
+      }
+    : undefined;
 
-  const saldoFlyout: FlyoutData = {
-    title: 'Saldo kas',
-    total: 6150000,
-    totalKind: 'rp',
-    delta: 'Rp 18,45 jt masuk bulan ini',
-    deltaTone: 'up',
-    bars: categorySummary.map((c) => ({ label: c.category, value: c.value })),
-    barsLabel: 'Rekap per kategori',
-  };
+  const pesananFlyout: FlyoutData | undefined = stats
+    ? {
+        title: 'Pesanan hari ini',
+        total: stats.pesananHariIni,
+        totalKind: 'number',
+        totalSuffix: 'pesanan',
+        delta: 'Hari ini',
+        deltaTone: 'flat',
+        bars: ['Baru', 'Disiapkan', 'Siap', 'Selesai'].map((s) => ({
+          label: s,
+          value: statusCounts[s] ?? 0,
+        })),
+        barsLabel: 'Pesanan per status',
+      }
+    : undefined;
 
-  const katalogFlyout: FlyoutData = {
-    title: 'Katalog',
-    total: productsKoperasi.length + productsWarkop.length,
-    totalKind: 'number',
-    totalSuffix: 'produk',
-    delta: '8 koperasi dan 8 warkop',
-    deltaTone: 'flat',
-    bars: [
-      { label: 'Koperasi', value: koperasiStock },
-      { label: 'Warkop', value: warkopStock },
-    ],
-    barsLabel: 'Stok per katalog',
-  };
+  const saldoFlyout: FlyoutData | undefined = stats
+    ? {
+        title: 'Saldo kas',
+        total: stats.saldo,
+        totalKind: 'rp',
+        delta: `${fmtRp(stats.masukBulanIni)} masuk bulan ini`,
+        deltaTone: 'up',
+        bars: stats.categoryTotals,
+        barsLabel: 'Rekap per kategori',
+      }
+    : undefined;
 
-  const antreanFlyout: FlyoutData = {
-    title: 'Antrean barista',
-    total: baristaOrders.length,
-    totalKind: 'number',
-    totalSuffix: 'pesanan',
-    delta: '1 draft ShopeeFood perlu dicek',
-    deltaTone: 'flat',
-    bars: ['Baru', 'Disiapkan', 'Siap'].map((s) => ({
-      label: s,
-      value: baristaCounts[s] ?? 0,
-    })),
-    barsLabel: 'Antrean per status',
-  };
+  const katalogFlyout: FlyoutData | undefined = stats
+    ? {
+        title: 'Katalog',
+        total: stats.catalogTotal,
+        totalKind: 'number',
+        totalSuffix: 'produk',
+        delta: `${stats.koperasiCount} koperasi dan ${stats.warkopCount} warkop`,
+        deltaTone: 'flat',
+        bars: [
+          { label: 'Koperasi', value: stats.koperasiStock },
+          { label: 'Warkop', value: stats.warkopStock },
+        ],
+        barsLabel: 'Stok per katalog',
+      }
+    : undefined;
+
+  const antreanFlyout: FlyoutData | undefined = stats
+    ? {
+        title: 'Antrean barista',
+        total: stats.queueTotal,
+        totalKind: 'number',
+        totalSuffix: 'pesanan',
+        delta:
+          stats.draftCount > 0
+            ? `${stats.draftCount} draft ShopeeFood perlu dicek`
+            : 'Tidak ada draft',
+        deltaTone: 'flat',
+        bars: ['Baru', 'Disiapkan', 'Siap'].map((s) => ({
+          label: s,
+          value: baristaCounts[s] ?? 0,
+        })),
+        barsLabel: 'Antrean per status',
+      }
+    : undefined;
 
   const menus: Record<RoleKey, MenuItem[]> = {
     guest: [
@@ -160,11 +332,11 @@ export function Sidebar() {
         to: '/pelanggan',
         label: 'Katalog',
         icon: <IconBag />,
-        status: `${productsKoperasi.length + productsWarkop.length} produk`,
+        status: stats ? `${stats.catalogTotal} produk` : undefined,
         flyout: katalogFlyout,
         children: [
-          { to: '/pelanggan?tab=koperasi', label: 'Koperasi', status: `${productsKoperasi.length} produk` },
-          { to: '/pelanggan?tab=warkop', label: 'Warkop', status: `${productsWarkop.length} produk` },
+          { to: '/pelanggan?tab=koperasi', label: 'Koperasi', status: stats ? `${stats.koperasiCount} produk` : undefined },
+          { to: '/pelanggan?tab=warkop', label: 'Warkop', status: stats ? `${stats.warkopCount} produk` : undefined },
         ],
       },
       {
@@ -188,7 +360,7 @@ export function Sidebar() {
         to: '/manager',
         label: 'Dashboard',
         icon: <IconDashboard />,
-        status: 'Rp 1.000.000',
+        status: stats ? fmtRp(stats.omzetHariIni) : undefined,
         flyout: omzetFlyout,
       },
       {
@@ -218,7 +390,7 @@ export function Sidebar() {
         to: '/finance',
         label: 'Keuangan',
         icon: <IconWallet />,
-        status: 'Rp 6.150.000',
+        status: stats ? fmtRp(stats.saldo) : undefined,
         flyout: saldoFlyout,
         children: ['Penjualan', 'Belanja bahan', 'Gaji', 'Operasional', 'Iuran anggota'].map((c) => ({
           to: `/finance?kategori=${encodeURIComponent(c)}`,
@@ -231,7 +403,7 @@ export function Sidebar() {
         to: '/finance/transaksi-baru',
         label: 'Tambah transaksi',
         icon: <IconPlus />,
-        status: `${txs.length} transaksi`,
+        status: stats ? `${stats.txCount} transaksi` : undefined,
       },
     ],
     barista: [
@@ -253,7 +425,7 @@ export function Sidebar() {
         to: '/barista/katalog',
         label: 'Katalog warkop',
         icon: <IconBox />,
-        status: `${warkopCatalog.length} menu`,
+        status: stats ? `${stats.warkopCount} menu` : undefined,
       },
     ],
   };
@@ -266,7 +438,8 @@ export function Sidebar() {
     return location.pathname === item.to;
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logoutApi();
     clearSession();
     setFlyoutId(null);
     setOpenGroup(null);
@@ -290,7 +463,9 @@ export function Sidebar() {
       }}
     >
       <div className="sidebar__brand">
-        <span className="sidebar__logo">MBG</span>
+        <span className="sidebar__logo">
+          <img src={LOGO_URL} alt="Logo Koperasi MBG" />
+        </span>
         <span className="sidebar__brand-text">Koperasi MBG</span>
         <button
           type="button"
@@ -376,7 +551,7 @@ export function Sidebar() {
           <button
             type="button"
             className="sidebar__logout"
-            onClick={handleLogout}
+            onClick={() => void handleLogout()}
             aria-label="Keluar"
             title="Keluar"
           >
@@ -386,7 +561,7 @@ export function Sidebar() {
       </div>
 
       {session && (
-        <button type="button" className="sidebar-item__link sidebar-logout--mobile" onClick={handleLogout}>
+        <button type="button" className="sidebar-item__link sidebar-logout--mobile" onClick={() => void handleLogout()}>
           <span className="sidebar-item__icon">
             <IconLogout />
           </span>

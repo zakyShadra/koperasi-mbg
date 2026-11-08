@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { PatternTile } from "./pattern-tile";
 
 /**
- * Pattern presets — minimal repeating cells re-authored from Nucleo's free SVG
+ * Pattern presets - minimal repeating cells re-authored from Nucleo's free SVG
  * patterns (https://nucleoapp.com/svg-patterns/). Every cell is painted with
  * `currentColor`, so `color` drives it. Base names use 6px spacing; `-sparse`
  * and `-dense` variants double or halve it.
@@ -234,7 +234,7 @@ export type PatternPresetKey = (typeof PATTERN_PRESET_IDS)[number];
 /** Ids from the pre-Nucleo preset set, still accepted and mapped forward. */
 export type LegacyPatternPresetId = "diagonal" | "cross" | "accent";
 
-/** Any accepted preset id — current or legacy. */
+/** Any accepted preset id - current or legacy. */
 export type PatternPresetId = PatternPresetKey | LegacyPatternPresetId;
 
 const LEGACY_PATTERN_PRESETS: Record<LegacyPatternPresetId, PatternPresetKey> =
@@ -290,13 +290,13 @@ export interface PatternPresetOptions {
   opacity?: number;
   /** Solid fill painted under the artwork. */
   tileBackground?: string;
-  /** @deprecated No effect — only applied to the pre-Nucleo circle presets. */
+  /** @deprecated No effect - only applied to the pre-Nucleo circle presets. */
   radius?: number;
-  /** @deprecated No effect — only applied to the pre-Nucleo circle presets. */
+  /** @deprecated No effect - only applied to the pre-Nucleo circle presets. */
   complement?: boolean;
-  /** @deprecated No effect — only applied to the pre-Nucleo circle presets. */
+  /** @deprecated No effect - only applied to the pre-Nucleo circle presets. */
   fill?: string;
-  /** @deprecated No effect — only applied to the pre-Nucleo dot preset. */
+  /** @deprecated No effect - only applied to the pre-Nucleo dot preset. */
   dotFill?: boolean;
 }
 
@@ -364,7 +364,7 @@ export function renderPatternPreset(
 }
 
 export interface PatternPresetProps extends PatternPresetOptions {
-  /** Unique id — reference it as `fill="url(#id)"`. */
+  /** Unique id - reference it as `fill="url(#id)"`. */
   id: string;
   /** Preset to draw. Default: `"diagonal-up"` */
   preset?: PatternPresetId;

@@ -73,7 +73,7 @@ export interface BarChartProps {
   animationEasing?: string;
   /** Motion enter transition (spring or cubic-bezier tween). */
   enterTransition?: Transition;
-  /** Signature of motion URL state — triggers enter replay when it changes. */
+  /** Signature of motion URL state - triggers enter replay when it changes. */
   revealSignature?: string;
   /** Aspect ratio as "width / height". Default: "2 / 1" */
   aspectRatio?: string;
@@ -91,7 +91,7 @@ export interface BarChartProps {
   stackGap?: number;
   /** When set, tooltip Y positions snap to the top square center (shape variant). */
   squareSnap?: { squareGap: number; groupGap?: number; fit?: boolean };
-  /** Child components (Bar, Grid, ChartTooltip, etc.). Optional — omit for a
+  /** Child components (Bar, Grid, ChartTooltip, etc.). Optional - omit for a
    * pure `status="loading"` skeleton. */
   children?: ReactNode;
   /** Reports reveal lifecycle for OG screenshots and loading orchestration. */
@@ -126,7 +126,7 @@ function extractBarConfigs(children: ReactNode): LineConfig[] {
       __isBarDepthLayer?: boolean;
     };
     // Bar-depth surface layers (BarDepthBack/Front, BarPulse) carry a
-    // `dataKey` to pair with a Bar but are not series themselves — skip them
+    // `dataKey` to pair with a Bar but are not series themselves - skip them
     // so they don't inflate the series count and shrink the real bars.
     if (childType.__isBarDepthLayer) {
       return;
@@ -135,7 +135,7 @@ function extractBarConfigs(children: ReactNode): LineConfig[] {
       typeof child.type === "function"
         ? childType.displayName || childType.name || ""
         : "";
-    // Trend overlays fit an existing series — not a bar series themselves.
+    // Trend overlays fit an existing series - not a bar series themselves.
     if (componentName === "TrendLine") {
       return;
     }
@@ -360,7 +360,7 @@ const ChartCore = memo(function ChartCore({
     return scale;
   }, [categoryScale, innerWidth, data.length]);
 
-  // Animation timing — replay when motion settings / status change. The
+  // Animation timing - replay when motion settings / status change. The
   // reset is adjusted during render ("store previous props in state") instead
   // of setState in an effect, so a replay costs a single render.
   const [revealKey, setRevealKey] = useState({
@@ -513,7 +513,7 @@ const ChartCore = memo(function ChartCore({
       // Tooltip position: for horizontal, position at max bar end; for vertical, center of band
       let tooltipX: number;
       if (isHorizontal) {
-        // Position tooltip at the right-most bar edge — the value end for
+        // Position tooltip at the right-most bar edge - the value end for
         // positive bars, the zero line for negative ones.
         const maxX = Math.max(...Object.values(xPositions), valueScale(0) ?? 0);
         tooltipX = maxX;

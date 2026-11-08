@@ -5,21 +5,26 @@ import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import { CartLines } from '../features/pelanggan/CartPanel';
 import { PelangganLoader } from '../features/pelanggan/PelangganLoader';
+import { WarkopClosedBanner } from '../features/pelanggan/WarkopClosed';
 import { PAYMENT_METHODS } from '../features/pelanggan/cart';
-import type { PaymentMethodId } from '../features/pelanggan/cart';
+import type { PaymentMethodId, PlacedOrder } from '../features/pelanggan/cart';
 import { useCart } from '../features/pelanggan/cart-context';
+import { createOrder, friendlyError } from '../lib/api';
+import { useWarkopStatus } from '../lib/warkop';
 import './Pelanggan.css';
 
 export default function CheckoutPage() {
-  const { lines, placeOrder } = useCart();
+  const { lines, recordOrder } = useCart();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [wa, setWa] = useState('');
   const [method, setMethod] = useState<PaymentMethodId>('tunai');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const { status: warkopStatus, refresh: refreshWarkop } = useWarkopStatus();
+  const closed = warkopStatus === 'tutup';
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (lines.length === 0) {
       setError('Keranjang masih kosong.');
@@ -29,19 +34,56 @@ export default function CheckoutPage() {
       setError('Nama dan nomor WA wajib diisi.');
       return;
     }
+    const missing = lines.some((line) => !line.product.apiId);
+    if (missing) {
+      setError('Katalog belum termuat dari server, muat ulang halaman.');
+      return;
+    }
     setError('');
     setSubmitting(true);
-    const methodLabel = PAYMENT_METHODS.find((m) => m.id === method)?.label ?? 'Tunai di tempat';
-    window.setTimeout(() => {
-      const order = placeOrder(name.trim(), wa.trim(), methodLabel);
+    try {
+      const res = await createOrder({
+        nama: name.trim(),
+        no_wa: wa.trim(),
+        items: lines.map((line) => ({
+          product_id: line.product.apiId as number,
+          qty: line.qty,
+        })),
+        metode_bayar: method,
+      });
+      const methodLabel = PAYMENT_METHODS.find((m) => m.id === method)?.label ?? 'Tunai di tempat';
+      const order: PlacedOrder = {
+        number: res.order.nomor_pesanan,
+        orderId: res.order.id,
+        name: name.trim(),
+        wa: wa.trim(),
+        methodLabel,
+        methodId: method,
+        total: res.order.total,
+        itemCount: lines.reduce((sum, line) => sum + line.qty, 0),
+        items: lines.map((line) => ({
+          name: line.product.name,
+          qty: line.qty,
+          price: line.product.price,
+        })),
+        createdAt: res.order.dibuat_pada,
+        qrisPayload: res.qris_payload,
+        qrisDummy: res.qris_dummy,
+        status: res.order.status,
+      };
+      recordOrder(order);
       navigate(`/pelanggan/lacak/${order.number}`, { replace: true });
-    }, 1500);
+    } catch (err) {
+      setError(friendlyError(err));
+      setSubmitting(false);
+    }
   };
 
   return (
     <View>
       <div className="pelanggan-page view-enter">
         <PelangganLoader active={submitting} text="Mengirim pesanan..." />
+        <WarkopClosedBanner status={warkopStatus} onRefresh={() => void refreshWarkop()} />
         <GlassCard className="checkout-card">
           <div className="cart-solid">
             <h2 className="cart-title">Checkout</h2>
@@ -57,7 +99,7 @@ export default function CheckoutPage() {
             ) : (
               <>
                 <CartLines items={lines} readOnly />
-                <form className="cart-form" onSubmit={handleSubmit}>
+                <form className="cart-form" onSubmit={(e) => void handleSubmit(e)}>
                   <label className="cart-field">
                     <span>Nama</span>
                     <input
@@ -97,8 +139,16 @@ export default function CheckoutPage() {
                     ))}
                   </fieldset>
                   {error && <p className="cart-error">{error}</p>}
-                  <button type="submit" className="btn btn-primary cart-submit" disabled={submitting}>
-                    {submitting ? 'Mengirim...' : 'Pesan sekarang'}
+                  <button
+                    type="submit"
+                    className="btn btn-primary cart-submit"
+                    disabled={submitting || closed}
+                  >
+                    {closed
+                      ? 'Warkop tutup, pesanan dijeda'
+                      : submitting
+                        ? 'Mengirim...'
+                        : 'Pesan sekarang'}
                   </button>
                 </form>
               </>

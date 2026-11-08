@@ -138,7 +138,7 @@ export interface SeriesPointMarkerProps extends SeriesPointMarkerStyle {
 const MARKER_ENTERED_STYLE = { opacity: 1, filter: "blur(0px)" } as const;
 
 /**
- * Enter marker — used only while the chart reveal is running.
+ * Enter marker - used only while the chart reveal is running.
  *
  * The fade/unblur is a Web Animation, not a Motion component: same keyframes,
  * delay, duration and easing (`DEFAULT_ANIMATION_EASING` is the chart enter

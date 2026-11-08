@@ -162,7 +162,7 @@ export function flattenSeriesPath(
     .x((point) => point.x)
     .y((point) => point.y)
     .curve(curve)
-    // Minimal CanvasPath recorder — only implements the commands d3 curves emit.
+    // Minimal CanvasPath recorder - only implements the commands d3 curves emit.
     .context(recorder as unknown as CanvasRenderingContext2D)(points);
   return recorder.points.sort((a, b) => a.x - b.x);
 }

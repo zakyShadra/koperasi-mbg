@@ -129,7 +129,7 @@ export interface LineSparklineProps<T> extends SparklineBaseProps<T> {
   endDot?: boolean;
   /**
    * On hover, fade the series and re-stroke the segment around the hovered
-   * point at full strength — the main charts' highlight. Default `true`.
+   * point at full strength - the main charts' highlight. Default `true`.
    */
   showHighlight?: boolean;
   /** Series opacity while hovering (with `showHighlight`). Default `0.5`. */
@@ -680,7 +680,7 @@ function SparklineHighlight({
   const width = useSpring(end - start, HIGHLIGHT_SPRING);
 
   useLayoutEffect(() => {
-    // Reuse the base stroke's `d` — it may be mid data-transition.
+    // Reuse the base stroke's `d` - it may be mid data-transition.
     highlightRef.current?.setAttribute(
       "d",
       lineRef.current?.getAttribute("d") ?? ""
@@ -1178,20 +1178,20 @@ function BarPaths({
   );
 }
 
-/** Tiny line chart — one path, no axes, minimal hover crosshair + dot. */
+/** Tiny line chart - one path, no axes, minimal hover crosshair + dot. */
 export const LineSparkline = memo(
   LineSparklineImpl
 ) as typeof LineSparklineImpl;
-/** Tiny area chart — line over a gradient or solid fill. */
+/** Tiny area chart - line over a gradient or solid fill. */
 export const AreaSparkline = memo(
   AreaSparklineImpl
 ) as typeof AreaSparklineImpl;
-/** Tiny bar chart — all bars drawn as a single path. */
+/** Tiny bar chart - all bars drawn as a single path. */
 export const BarSparkline = memo(BarSparklineImpl) as typeof BarSparklineImpl;
 
 /**
  * Lift a sparkline's hover state so you can display the hovered value.
- * Spread `sparklineProps` onto one sparkline — or several to sync their
+ * Spread `sparklineProps` onto one sparkline - or several to sync their
  * crosshairs.
  *
  * ```tsx

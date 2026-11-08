@@ -13,7 +13,7 @@ export interface UseChartPhaseOrchestratorOptions {
   skeletonData: Record<string, unknown>[];
   animationDuration: number;
   yDomainTweenDuration: number;
-  /** Signature of motion URL state — replays clip reveal in Studio. */
+  /** Signature of motion URL state - replays clip reveal in Studio. */
   revealSignature?: string;
   /** Skip mount/signature enter reveal (static docs previews). */
   skipEnterReveal?: boolean;
@@ -120,7 +120,7 @@ function shouldReplayReveal(prev: PhaseInputs, next: PhaseInputs): boolean {
 }
 
 /**
- * Pure transition for a change in inputs (props or the phase itself) —
+ * Pure transition for a change in inputs (props or the phase itself) -
  * mirrors the former status / replay / reveal-epoch effects.
  */
 function resolvePhaseTransition(
@@ -192,7 +192,7 @@ export function useChartPhaseOrchestrator({
     () => chartStatus === "ready" && (skipEnterReveal || animationDuration <= 0)
   );
 
-  // Previous inputs — compared during render to derive transitions.
+  // Previous inputs - compared during render to derive transitions.
   const [prev, setPrev] = useState<PhaseInputs>({
     chartStatus,
     chartPhase,
@@ -236,19 +236,19 @@ export function useChartPhaseOrchestrator({
     targetData
   );
 
-  /** Loading pulse exit finished — tween grid to ready spacing next. */
+  /** Loading pulse exit finished - tween grid to ready spacing next. */
   const notifyLoadingPulseComplete = useCallback(() => {
     setChartPhase((phase) => (phase === "exiting" ? "gridTweenReady" : phase));
   }, []);
 
-  /** Ready series conceal finished — tween grid to loading spacing next. */
+  /** Ready series conceal finished - tween grid to loading spacing next. */
   const notifyRevealConcealComplete = useCallback(() => {
     setChartPhase((phase) =>
       phase === "exitingReady" ? "gridTweenLoading" : phase
     );
   }, []);
 
-  /** Grid tween finished — enter the next resting phase. */
+  /** Grid tween finished - enter the next resting phase. */
   const notifyYDomainTweenComplete = useCallback(() => {
     setChartPhase((phase) => {
       if (phase === "gridTweenLoading") {
@@ -261,7 +261,7 @@ export function useChartPhaseOrchestrator({
     });
   }, []);
 
-  // Reveal timer — the only async transition owned by this hook.
+  // Reveal timer - the only async transition owned by this hook.
   useEffect(() => {
     if (chartPhase !== "revealing") {
       return;

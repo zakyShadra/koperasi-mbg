@@ -139,7 +139,7 @@ function gridLine(
 
 /**
  * The visx group wrapper (`translate(left, top)` + `className`), skipped when
- * it would be an identity transform with no class — one less node per grid.
+ * it would be an identity transform with no class - one less node per grid.
  */
 function wrapGridLines(
   lines: ReactElement[],

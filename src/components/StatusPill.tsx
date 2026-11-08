@@ -5,6 +5,7 @@ const STATUS_CLASS: Record<OrderStatus, string> = {
   Disiapkan: 'st-disiapkan',
   Siap: 'st-siap',
   Selesai: 'st-selesai',
+  Dibatalkan: 'st-batal',
 };
 
 interface StatusPillProps {

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { requestOtp, verifyOtp } from '../lib/auth-api';
-import { isLoggedIn } from '../lib/auth-session';
+import { requestOtp, verifyOtp } from '../lib/api';
+import { getSession } from '../lib/auth-session';
 
 const ROLE_HOME: Record<string, string> = {
   manager: '/manager',
@@ -49,8 +49,9 @@ export default function Login() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
-  if (isLoggedIn()) {
-    return <Navigate to="/manager" replace />;
+  const existingSession = getSession();
+  if (existingSession) {
+    return <Navigate to={ROLE_HOME[existingSession.role] ?? '/manager'} replace />;
   }
 
   const focusBox = (index: number) => {
@@ -179,7 +180,7 @@ export default function Login() {
                     className="input"
                     type="email"
                     autoComplete="email"
-                    placeholder="nama@mbg.dev"
+                    placeholder="nama@mbg.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -199,7 +200,7 @@ export default function Login() {
             <>
               <h1 className="login-title">Masukkan kode</h1>
               <p className="login-sub">
-                Kode 6 digit dikirim ke {email}. Kode berlaku 5 menit.
+                Kode 6 digit dikirim ke {email}. Kode berlaku 10 menit.
               </p>
               <div className="login-form">
                 <div
@@ -264,8 +265,8 @@ export default function Login() {
         </div>
 
         <p className="form-note" style={{ marginTop: 24 }}>
-          Mode demo: backend OTP (Worker + D1) belum terhubung. Kode demo
-          tampil di bawah (DEV ONLY, dihapus saat backend jadi).
+          Kode demo tampil di bawah karena mode DEV masih aktif (DEV ONLY,
+          dihapus saat peluncuran).
         </p>
         {devCode ? (
           <div className="dev-code-box" style={{ marginTop: 8 }}>

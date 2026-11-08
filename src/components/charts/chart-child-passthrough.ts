@@ -54,7 +54,7 @@ export function resolveLazyChartChild(child: ReactElement): ReactElement {
   try {
     resolved = type._init(type._payload);
   } catch {
-    // Module still loading (lazy init throws a thenable) — keep the lazy element.
+    // Module still loading (lazy init throws a thenable) - keep the lazy element.
     return child;
   }
   if (
@@ -84,7 +84,7 @@ export function isUnresolvedLazyChartChild(child: ReactElement): boolean {
 /**
  * Unwrap visibility wrappers so `Grid` / axes stay outside the series clip.
  *
- * Use the result to classify a child only — render {@link renderableChartChild}
+ * Use the result to classify a child only - render {@link renderableChartChild}
  * instead, or a wrapper that hides its child (Studio layer toggles) is bypassed.
  */
 export function resolveChartChildElement(child: ReactElement): ReactElement {

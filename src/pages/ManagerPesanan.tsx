@@ -1,18 +1,53 @@
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import OrderTable from '../components/OrderTable';
-import { recentOrders } from '../lib/dummy';
-import type { OrderStatus } from '../lib/dummy';
+import type { Order, OrderStatus } from '../lib/dummy';
+import { friendlyError, getOrders, mapApiOrder } from '../lib/api';
 import './Manager.css';
 
-const STATUSES: Array<'Semua' | OrderStatus> = ['Semua', 'Baru', 'Disiapkan', 'Siap', 'Selesai'];
+const STATUSES: Array<'Semua' | OrderStatus> = [
+  'Semua',
+  'Baru',
+  'Disiapkan',
+  'Siap',
+  'Selesai',
+  'Dibatalkan',
+];
+
+const API_STATUS: Record<OrderStatus, string> = {
+  Baru: 'baru',
+  Disiapkan: 'disiapkan',
+  Siap: 'siap',
+  Selesai: 'selesai',
+  Dibatalkan: 'dibatalkan',
+};
 
 export default function ManagerPesanan() {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get('status') ?? 'Semua';
-  const visible =
-    status === 'Semua' ? recentOrders : recentOrders.filter((o) => o.status === status);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const apiStatus =
+          status !== 'Semua' ? API_STATUS[status as OrderStatus] : undefined;
+        const list = await getOrders(apiStatus, 50);
+        setOrders(list.map(mapApiOrder));
+        setError('');
+      } catch (e) {
+        setError(friendlyError(e));
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [status]);
 
   return (
     <View>
@@ -20,9 +55,7 @@ export default function ManagerPesanan() {
         <GlassCard className="orders-card">
           <div className="card-head">
             <h2>Pesanan</h2>
-            <span className="card-count">
-              {visible.length} dari {recentOrders.length} pesanan
-            </span>
+            <span className="card-count">{orders.length} pesanan</span>
           </div>
           <div className="chips" role="group" aria-label="Filter status">
             {STATUSES.map((s) => (
@@ -44,7 +77,12 @@ export default function ManagerPesanan() {
               </button>
             ))}
           </div>
-          <OrderTable orders={visible} />
+          {error && (
+            <p className="cart-error" role="alert">
+              {error}
+            </p>
+          )}
+          {loading ? <p className="empty-note">Memuat pesanan...</p> : <OrderTable orders={orders} />}
         </GlassCard>
       </div>
     </View>

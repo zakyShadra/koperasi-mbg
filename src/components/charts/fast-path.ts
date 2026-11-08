@@ -100,7 +100,7 @@ type Generator<Datum> = Line<Datum> | Area<Datum>;
 
 /**
  * `generator(data) || ""` for a d3 `line()` / `area()` that uses the default
- * 3-digit rounding and no context of its own — same string, built faster.
+ * 3-digit rounding and no context of its own - same string, built faster.
  */
 export function fastShapePath<Datum>(
   generator: Generator<Datum>,

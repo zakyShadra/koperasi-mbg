@@ -27,7 +27,7 @@ export interface PatternAreaProps {
    */
   fadeBottom?: number;
   /**
-   * Fade the pattern toward transparent at the chart edges — same values as
+   * Fade the pattern toward transparent at the chart edges - same values as
    * `Area`: `true`, `"left"`, `"right"` or `{ left, right }` in % of the plot
    * width. Default: false
    */

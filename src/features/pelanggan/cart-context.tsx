@@ -1,13 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Product } from '../../lib/dummy';
-import {
-  addLine,
-  cartCount,
-  cartTotal,
-  changeLineQty,
-  makeOrderNumber,
-} from './cart';
+import { addLine, cartCount, cartTotal, changeLineQty } from './cart';
 import type { CartLine, PlacedOrder } from './cart';
 
 const CART_KEY = 'mbg-cart-v1';
@@ -41,7 +35,7 @@ export interface CartContextValue {
   add: (product: Product) => void;
   changeQty: (productId: string, delta: number) => void;
   clear: () => void;
-  placeOrder: (name: string, wa: string, methodLabel: string) => PlacedOrder;
+  recordOrder: (order: PlacedOrder) => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -80,24 +74,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       changeQty: (productId: string, delta: number) =>
         setLines((prev) => changeLineQty(prev, productId, delta)),
       clear: () => setLines([]),
-      placeOrder: (name: string, wa: string, methodLabel: string) => {
-        const order: PlacedOrder = {
-          number: makeOrderNumber(),
-          name,
-          wa,
-          methodLabel,
-          total: cartTotal(lines),
-          itemCount: cartCount(lines),
-          items: lines.map((line) => ({
-            name: line.product.name,
-            qty: line.qty,
-            price: line.product.price,
-          })),
-          createdAt: new Date().toISOString(),
-        };
+      recordOrder: (order: PlacedOrder) => {
         setLastOrder(order);
         setLines([]);
-        return order;
       },
     }),
     [lines, lastOrder],

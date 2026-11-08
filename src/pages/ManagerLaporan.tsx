@@ -1,51 +1,83 @@
+import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import { OmzetAreaChart } from '../components/MbgCharts';
 import { ReportPanel } from '../features/manager/ReportPanel';
-import { omzet7Hari, recentOrders } from '../lib/dummy';
-import { fmtRp } from '../lib/format';
+import { friendlyError, getOmzetReport } from '../lib/api';
+import { fillDaily, fmtRp, rangeDays, weekdayShort } from '../lib/format';
 import './Manager.css';
 
-const TREND_DATES = (() => {
-  const today = new Date();
-  return omzet7Hari.map((_, i) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (omzet7Hari.length - 1 - i));
-    return date;
-  });
-})();
+type Periode = '7 hari' | '30 hari';
 
 export default function ManagerLaporan() {
-  const totalOmzet = omzet7Hari.reduce((sum, d) => sum + d.value, 0);
-  const trendData = omzet7Hari.map((d, i) => ({ date: TREND_DATES[i], day: d.day, value: d.value }));
+  const [periode, setPeriode] = useState<Periode>('7 hari');
+  const [daily, setDaily] = useState<{ tanggal: string; pesanan: number; omzet: number }[]>([]);
+  const [total, setTotal] = useState({ pesanan: 0, omzet: 0 });
+  const [range, setRange] = useState({ from: '', to: '' });
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const days = periode === '7 hari' ? 7 : 30;
+        const { from, to } = rangeDays(days);
+        const report = await getOmzetReport(from, to);
+        setDaily(fillDaily(from, to, report.daily));
+        setTotal(report.total);
+        setRange({ from, to });
+        setError('');
+      } catch (e) {
+        setError(friendlyError(e));
+      }
+    };
+    void load();
+  }, [periode]);
+
+  const trendData = daily.map((d) => ({
+    date: new Date(`${d.tanggal}T12:00:00+07:00`),
+    day: weekdayShort(d.tanggal),
+    value: d.omzet,
+  }));
+  const totalOmzet = daily.reduce((sum, d) => sum + d.omzet, 0);
 
   return (
     <View>
       <div className="manager-page">
+        {error && (
+          <p className="cart-error" role="alert">
+            {error}
+          </p>
+        )}
         <section className="stats-row stats-row-3" aria-label="Ringkasan laporan">
           <GlassCard className="stat-card">
-            <p className="stat-card__label">Total omzet 7 hari</p>
-            <p className="stat-card__value">{fmtRp(totalOmzet)}</p>
+            <p className="stat-card__label">Total omzet {periode}</p>
+            <p className="stat-card__value">{fmtRp(total.omzet)}</p>
           </GlassCard>
           <GlassCard className="stat-card">
             <p className="stat-card__label">Pesanan tercatat</p>
-            <p className="stat-card__value">{recentOrders.length}</p>
+            <p className="stat-card__value">{total.pesanan}</p>
           </GlassCard>
           <GlassCard className="stat-card">
             <p className="stat-card__label">Periode laporan</p>
-            <p className="stat-card__value">7 hari</p>
+            <p className="stat-card__value">{periode}</p>
           </GlassCard>
         </section>
         <GlassCard className="chart-card stagger" style={{ '--d': '200ms' } as CSSProperties}>
           <div className="card-head">
-            <h2>Tren omzet 7 hari</h2>
+            <h2>Tren omzet {periode}</h2>
             <span className="card-total">{fmtRp(totalOmzet)}</span>
           </div>
           <OmzetAreaChart data={trendData} />
-          <p className="card-foot">Total 7 hari: {fmtRp(totalOmzet)}.</p>
+          <p className="card-foot">Total {periode}: {fmtRp(totalOmzet)}.</p>
         </GlassCard>
-        <ReportPanel />
+        <ReportPanel
+          periode={periode}
+          onPeriodeChange={setPeriode}
+          from={range.from}
+          to={range.to}
+          total={total}
+        />
       </div>
     </View>
   );

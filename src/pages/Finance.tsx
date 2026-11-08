@@ -6,10 +6,10 @@ import StatCard from '../components/StatCard';
 import { CashFlowChart, CategoryDonut } from '../components/MbgCharts';
 import View from '../components/View';
 import { TRANSACTION_CATEGORIES } from '../features/finance/TransactionForm';
-import { parseTxDate, useTransactions } from '../features/finance/transactions-store';
-import { categorySummary, financeStats } from '../lib/dummy';
+import { SHEET_URL, friendlyError, getCashReport, getTransactions } from '../lib/api';
+import type { ApiTransaction } from '../lib/api';
 import type { Transaction } from '../lib/dummy';
-import { fmtRp } from '../lib/format';
+import { fmtRp, formatTxDate, parseTxDate, todayWib } from '../lib/format';
 import './Finance.css';
 
 const FINANCE_ICONS: ReactNode[] = [
@@ -30,16 +30,72 @@ const FINANCE_ICONS: ReactNode[] = [
   </svg>,
 ];
 
+const DONUT_COLORS = ['#2dd4bf', '#fbbf24', '#fb923c', '#a8b5af', '#34d399', '#f87171'];
+
+function mapTransaction(t: ApiTransaction): Transaction {
+  const masuk = t.jenis === 'pembayaran' || t.jenis === 'simpanan' ? t.jumlah : 0;
+  return {
+    id: t.kode,
+    date: formatTxDate(t.dibuat_pada.slice(0, 10)),
+    note: t.keterangan ?? '-',
+    category: t.kategori ?? 'Lainnya',
+    masuk,
+    keluar: t.jenis === 'penarikan' ? t.jumlah : 0,
+  };
+}
+
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
 export default function Finance() {
-  const donutData = useMemo(
-    () => categorySummary.map((c) => ({ label: c.category, value: c.value, color: c.color })),
-    [],
-  );
-  const txs = useTransactions();
+  const [txs, setTxs] = useState<Transaction[]>([]);
+  const [cash, setCash] = useState<{ masuk: number; keluar: number; saldo: number } | null>(null);
+  const [donutData, setDonutData] = useState<{ label: string; value: number; color: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState('');
+  const paramKategori = searchParams.get('kategori');
+  const categoryFilter =
+    paramKategori && TRANSACTION_CATEGORIES.some((c) => c === paramKategori)
+      ? paramKategori
+      : 'Semua';
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const today = todayWib();
+        const monthStart = `${today.slice(0, 8)}01`;
+        const [list, report] = await Promise.all([
+          getTransactions(),
+          getCashReport(monthStart, today),
+        ]);
+        setTxs(list.map(mapTransaction));
+        setCash({ masuk: report.masuk, keluar: report.keluar, saldo: report.saldo });
+        const byCategory = new Map<string, number>();
+        for (const row of report.per_kategori) {
+          const key = row.kategori ?? 'Lainnya';
+          byCategory.set(key, (byCategory.get(key) ?? 0) + row.jumlah);
+        }
+        setDonutData(
+          [...byCategory.entries()].map(([label, value], i) => ({
+            label,
+            value,
+            color: DONUT_COLORS[i % DONUT_COLORS.length],
+          })),
+        );
+        setError('');
+      } catch (e) {
+        setError(friendlyError(e));
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, []);
+
   const cashByDay = useMemo(() => {
     const grouped = new Map<string, { day: string; masuk: number; keluar: number; sort: number }>();
     for (const t of txs) {
@@ -58,21 +114,6 @@ export default function Finance() {
       .sort((a, b) => a.sort - b.sort)
       .map(({ day, masuk, keluar }) => ({ day, masuk, keluar }));
   }, [txs]);
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState('');
-  const paramKategori = searchParams.get('kategori');
-  const categoryFilter =
-    paramKategori && TRANSACTION_CATEGORIES.some((c) => c === paramKategori)
-      ? paramKategori
-      : 'Semua';
-  const [notice, setNotice] = useState('');
-
-  useEffect(() => {
-    if (!notice) return;
-    const timer = window.setTimeout(() => setNotice(''), 4000);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
 
   const balanceById = useMemo(() => {
     const sorted = [...txs].sort((a, b) => parseTxDate(a.date) - parseTxDate(b.date));
@@ -94,6 +135,12 @@ export default function Finance() {
     });
     return [...filtered].sort((a, b) => parseTxDate(b.date) - parseTxDate(a.date));
   }, [txs, search, categoryFilter]);
+
+  const financeStats = [
+    { label: 'Kas masuk bulan ini', value: cash ? fmtRp(cash.masuk) : 'Memuat...' },
+    { label: 'Kas keluar bulan ini', value: cash ? fmtRp(cash.keluar) : 'Memuat...' },
+    { label: 'Saldo kas', value: cash ? fmtRp(cash.saldo) : 'Memuat...' },
+  ];
 
   const downloadCsv = () => {
     const header = ['Tanggal', 'Keterangan', 'Kategori', 'Masuk', 'Keluar', 'Saldo berjalan'];
@@ -141,17 +188,13 @@ export default function Finance() {
           <button type="button" className="btn btn-secondary" onClick={downloadCsv}>
             Download laporan (CSV)
           </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setNotice('Demo: belum terhubung ke Sheet')}
-          >
-            Simpan ke Sheet
-          </button>
+          <a className="btn btn-secondary" href={SHEET_URL} target="_blank" rel="noreferrer">
+            Buka Spreadsheet
+          </a>
         </div>
-        {notice && (
-          <p className="demo-notice" role="status">
-            {notice}
+        {error && (
+          <p className="demo-notice" role="alert">
+            {error}
           </p>
         )}
 
@@ -206,19 +249,27 @@ export default function Finance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleTxs.map((t) => (
-                    <tr key={t.id}>
-                      <td>{t.date}</td>
-                      <td>{t.note}</td>
-                      <td>
-                        <span className="pill category-pill">{t.category}</span>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={6} className="table-empty">
+                        Memuat transaksi...
                       </td>
-                      <td className="num tx-in">{t.masuk > 0 ? fmtRp(t.masuk) : '-'}</td>
-                      <td className="num tx-out">{t.keluar > 0 ? fmtRp(t.keluar) : '-'}</td>
-                      <td className="num tx-balance">{fmtRp(balanceById.get(t.id) ?? 0)}</td>
                     </tr>
-                  ))}
-                  {visibleTxs.length === 0 && (
+                  ) : (
+                    visibleTxs.map((t) => (
+                      <tr key={t.id}>
+                        <td>{t.date}</td>
+                        <td>{t.note}</td>
+                        <td>
+                          <span className="pill category-pill">{t.category}</span>
+                        </td>
+                        <td className="num tx-in">{t.masuk > 0 ? fmtRp(t.masuk) : '-'}</td>
+                        <td className="num tx-out">{t.keluar > 0 ? fmtRp(t.keluar) : '-'}</td>
+                        <td className="num tx-balance">{fmtRp(balanceById.get(t.id) ?? 0)}</td>
+                      </tr>
+                    ))
+                  )}
+                  {!loading && visibleTxs.length === 0 && (
                     <tr>
                       <td colSpan={6} className="table-empty">
                         Tidak ada transaksi yang cocok.
@@ -234,7 +285,11 @@ export default function Finance() {
             <div className="card-head">
               <h2>Rekap per kategori</h2>
             </div>
-            <CategoryDonut data={donutData} />
+            {donutData.length > 0 ? (
+              <CategoryDonut data={donutData} />
+            ) : (
+              <p className="empty-note">Belum ada transaksi bulan ini.</p>
+            )}
           </GlassCard>
         </section>
 

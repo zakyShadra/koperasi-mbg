@@ -34,7 +34,7 @@ interface UseChartInteractionParams {
   yScales: Record<string, ScaleLinear>;
   data: Record<string, unknown>[];
   lines: LineConfig[];
-  /** `<Band>` configs — edge y-positions for tooltip dots. */
+  /** `<Band>` configs - edge y-positions for tooltip dots. */
   bands?: BandConfig[];
   margin: Margin;
   xAccessor: (d: Record<string, unknown>) => Date;

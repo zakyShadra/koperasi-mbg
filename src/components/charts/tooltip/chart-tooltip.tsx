@@ -33,7 +33,7 @@ export interface ChartTooltipProps {
    * Whether to show the crosshair indicator line. Default: `true` for
    * line / area / composed / scatter charts, `false` inside `BarChart`
    * (vertical and horizontal) and `ScatterChart` with `jitter` (hover snaps to
-   * the nearest point, not a date) — pass `showCrosshair` to opt in.
+   * the nearest point, not a date) - pass `showCrosshair` to opt in.
    */
   showCrosshair?: boolean;
   /** Whether to show dots on the lines. Default: true */
@@ -102,7 +102,7 @@ export interface ChartTooltipProps {
   springConfig?: SpringConfig;
   /**
    * When `true`, the floating panel uses the crosshair spring and stays in sync.
-   * Default `false` — panel follow uses `damping` (`20`).
+   * Default `false` - panel follow uses `damping` (`20`).
    */
   matchCrosshair?: boolean;
   /**
@@ -171,7 +171,7 @@ function resolveActivePoint(
   };
 }
 
-/** Smallest (topmost) hovered y across series — `indicatorEnd="point"`. */
+/** Smallest (topmost) hovered y across series - `indicatorEnd="point"`. */
 function resolveTopmostPointY(
   tooltipData: TooltipData | null,
   lines: LineConfig[]
@@ -367,7 +367,7 @@ const ChartTooltipInner = memo(function ChartTooltipInner({
 
     // Default: generate rows from registered lines, then `<Band>` ranges.
     // With nearest-point hover (jittered scatter) a row may hold only some
-    // series — skip the rest.
+    // series - skip the rest.
     const rowLines = nearestPointHover
       ? lines.filter(
           (line) => typeof tooltipData.point[line.dataKey] === "number"

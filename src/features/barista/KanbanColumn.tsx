@@ -8,10 +8,11 @@ export interface KanbanColumnProps {
   tone: KanbanTone;
   orders: Order[];
   onAdvance: (order: Order) => void;
+  onMarkPaid?: (order: Order) => void;
   emptyText: string;
 }
 
-export function KanbanColumn({ title, tone, orders, onAdvance, emptyText }: KanbanColumnProps) {
+export function KanbanColumn({ title, tone, orders, onAdvance, onMarkPaid, emptyText }: KanbanColumnProps) {
   return (
     <section className={`kanban-column kanban-${tone}`} aria-label={`Kolom ${title}`}>
       <header className="kanban-header">
@@ -23,7 +24,7 @@ export function KanbanColumn({ title, tone, orders, onAdvance, emptyText }: Kanb
           <p className="kanban-empty">{emptyText}</p>
         ) : (
           orders.map((order, i) => (
-            <OrderCard key={orderKey(order)} order={order} onAdvance={onAdvance} delay={i * 50} />
+            <OrderCard key={orderKey(order)} order={order} onAdvance={onAdvance} onMarkPaid={onMarkPaid} delay={i * 50} />
           ))
         )}
       </div>

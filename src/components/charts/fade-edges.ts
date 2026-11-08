@@ -9,7 +9,7 @@ export interface FadeSides {
   left: boolean;
   /** Whether the right edge should fade out. */
   right: boolean;
-  /** True if either side fades — use to gate gradient/mask defs. */
+  /** True if either side fades - use to gate gradient/mask defs. */
   any: boolean;
   /** Left fade zone, % of the plot width. */
   leftLength: number;
@@ -75,7 +75,7 @@ export function fadeGradientStops(sides: FadeSides): FadeGradientStop[] {
 
 /**
  * Drop a stop that repeats the previous offset with the same opacity (a 0%
- * fade zone) — keeps offsets unique, so they're safe as React keys.
+ * fade zone) - keeps offsets unique, so they're safe as React keys.
  */
 function dedupeStops<T extends { offset: string | number; opacity: number }>(
   stops: T[]

@@ -214,7 +214,7 @@ export function sparklineBarWidth(band: number, gap: number): number {
   return Math.max(1, band - gap);
 }
 
-/** All bars as a single path — one DOM node regardless of point count. */
+/** All bars as a single path - one DOM node regardless of point count. */
 export function buildSparklineBarsPath(
   layout: SparklineLayout,
   options: { gap: number; radius: number }

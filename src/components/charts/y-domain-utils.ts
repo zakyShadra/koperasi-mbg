@@ -7,7 +7,7 @@ export type YDomain = [number, number];
 
 /**
  * Per-axis y-domain override: a fixed `[min, max]`, or a function that
- * receives the auto domain (before `nice()`) and returns the one to use —
+ * receives the auto domain (before `nice()`) and returns the one to use -
  * e.g. `([, max]) => [0, max * 3]` to push volume bars into the bottom third.
  */
 export type YDomainOverride = YDomain | ((auto: YDomain) => YDomain);
@@ -149,7 +149,7 @@ export function niceYDomain(domain: YDomain): YDomain {
 
 /**
  * Skip Y tween when both endpoints move less than the threshold relative to span.
- * When in doubt callers should tween — beauty wins over micro-optimization.
+ * When in doubt callers should tween - beauty wins over micro-optimization.
  */
 export function shouldTweenYDomain(from: YDomain, to: YDomain): boolean {
   const span = Math.max(

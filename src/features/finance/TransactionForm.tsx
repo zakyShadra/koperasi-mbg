@@ -9,47 +9,53 @@ export const TRANSACTION_CATEGORIES = [
   'Iuran anggota',
 ] as const;
 
+export const TRANSACTION_METHODS = [
+  { id: 'tunai', label: 'Tunai' },
+  { id: 'transfer', label: 'Transfer' },
+  { id: 'qris', label: 'QRIS' },
+] as const;
+
 export type NewTransactionInput = {
-  date: string;
   note: string;
   category: string;
   masuk: number;
   keluar: number;
+  metode: string;
 };
 
 type TransactionFormProps = {
   open: boolean;
   onClose: () => void;
-  onSubmit: (tx: NewTransactionInput) => void;
-  // 'modal': melayang di atas halaman (dipakai dulu di Finance).
-  // 'page': form jadi isi halaman sendiri (/finance/transaksi-baru).
+  onSubmit: (tx: NewTransactionInput) => void | Promise<void>;
+  serverError?: string;
   mode?: 'modal' | 'page';
 };
 
-function todayIso(): string {
-  const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
-export function TransactionForm({ open, onClose, onSubmit, mode = 'modal' }: TransactionFormProps) {
-  const [date, setDate] = useState(todayIso());
+export function TransactionForm({
+  open,
+  onClose,
+  onSubmit,
+  serverError,
+  mode = 'modal',
+}: TransactionFormProps) {
   const [note, setNote] = useState('');
   const [category, setCategory] = useState<string>(TRANSACTION_CATEGORIES[0]);
   const [amount, setAmount] = useState('');
   const [jenis, setJenis] = useState<'Masuk' | 'Keluar'>('Masuk');
+  const [metode, setMetode] = useState<string>('tunai');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setDate(todayIso());
     setNote('');
     setCategory(TRANSACTION_CATEGORIES[0]);
     setAmount('');
     setJenis('Masuk');
+    setMetode('tunai');
     setError('');
-  }, [open ]);
+    setSubmitting(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,7 +68,7 @@ export function TransactionForm({ open, onClose, onSubmit, mode = 'modal' }: Tra
 
   if (!open) return null;
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!note.trim()) {
       setError('Keterangan wajib diisi.');
@@ -73,18 +79,19 @@ export function TransactionForm({ open, onClose, onSubmit, mode = 'modal' }: Tra
       setError('Jumlah harus lebih dari 0.');
       return;
     }
-    if (!date) {
-      setError('Tanggal wajib diisi.');
-      return;
-    }
     setError('');
-    onSubmit({
-      date,
-      note: note.trim(),
-      category,
-      masuk: jenis === 'Masuk' ? jumlah : 0,
-      keluar: jenis === 'Keluar' ? jumlah : 0,
-    });
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        note: note.trim(),
+        category,
+        masuk: jenis === 'Masuk' ? jumlah : 0,
+        keluar: jenis === 'Keluar' ? jumlah : 0,
+        metode,
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const formBody = (
@@ -95,17 +102,7 @@ export function TransactionForm({ open, onClose, onSubmit, mode = 'modal' }: Tra
           Tutup
         </button>
       </div>
-      <form onSubmit={handleSubmit} noValidate>
-        <label className="tx-field" htmlFor="tx-date">
-          <span>Tanggal</span>
-          <input
-            id="tx-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </label>
+      <form onSubmit={(e) => void handleSubmit(e)} noValidate>
         <label className="tx-field" htmlFor="tx-note">
           <span>Keterangan</span>
           <input
@@ -151,18 +148,29 @@ export function TransactionForm({ open, onClose, onSubmit, mode = 'modal' }: Tra
               <option value="Keluar">Keluar</option>
             </select>
           </label>
+          <label className="tx-field" htmlFor="tx-metode">
+            <span>Metode</span>
+            <select id="tx-metode" value={metode} onChange={(e) => setMetode(e.target.value)}>
+              {TRANSACTION_METHODS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-        {error && (
+        <p className="form-note">Tanggal dicatat otomatis (hari ini).</p>
+        {(error || serverError) && (
           <p className="tx-error" role="alert">
-            {error}
+            {error || serverError}
           </p>
         )}
         <div className="tx-form-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>
             Batal
           </button>
-          <button type="submit" className="btn btn-primary">
-            Simpan transaksi
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? 'Menyimpan...' : 'Simpan transaksi'}
           </button>
         </div>
       </form>

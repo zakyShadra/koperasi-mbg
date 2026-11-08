@@ -12,7 +12,7 @@ import { memo, type RefObject, useLayoutEffect, useMemo, useRef } from "react";
 
 const TICKER_ITEM_HEIGHT = 24;
 const TICKER_SPRING = { stiffness: 400, damping: 35 };
-/** Full scroll stacks are skipped above this count — single label + instant updates. */
+/** Full scroll stacks are skipped above this count - single label + instant updates. */
 const COMPACT_TICKER_THRESHOLD = 60;
 
 /** Retarget a spring, or snap it when motion should be instant. */

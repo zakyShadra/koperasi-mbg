@@ -1,27 +1,68 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Order } from '../lib/dummy';
 import { View } from '../components/View';
 import { KanbanColumn } from '../features/barista/KanbanColumn';
 import { orderWaiting } from '../features/barista/OrderCard';
+import { useWarkopStatus } from '../lib/warkop';
 import {
-  advanceBaristaOrder,
-  useBaristaDoneCount,
-  useBaristaOrders,
-} from '../features/barista/barista-store';
+  friendlyError,
+  getQueue,
+  mapApiOrder,
+  payDummy,
+  setOrderStatus,
+  setWarkopStatus,
+} from '../lib/api';
 import './Barista.css';
 
 type BoardStatus = 'Baru' | 'Disiapkan' | 'Siap';
 
 const BOARD_STATUSES: BoardStatus[] = ['Baru', 'Disiapkan', 'Siap'];
 
+const NEXT_STATUS: Record<BoardStatus, string> = {
+  Baru: 'disiapkan',
+  Disiapkan: 'siap',
+  Siap: 'selesai',
+};
+
+const DONE_KEY = 'mbg-barista-done-v1';
+
+function loadDoneCount(): number {
+  try {
+    return Number(localStorage.getItem(DONE_KEY) ?? 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 export default function Barista() {
-  const orders = useBaristaOrders();
-  const doneCount = useBaristaDoneCount();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [doneCount, setDoneCount] = useState(loadDoneCount);
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get('status');
-  const [isOpen, setIsOpen] = useState(true);
+  const { status: warkopStatus, refresh: refreshWarkop } = useWarkopStatus();
+  const isOpen = warkopStatus !== 'tutup';
   const [now, setNow] = useState(() => new Date());
+
+  const refreshQueue = useCallback(async () => {
+    try {
+      const queue = await getQueue();
+      setOrders(queue.map(mapApiOrder));
+      setError('');
+    } catch (e) {
+      setError(friendlyError(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshQueue();
+    const id = window.setInterval(() => void refreshQueue(), 20000);
+    return () => window.clearInterval(id);
+  }, [refreshQueue]);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60000);
@@ -59,6 +100,51 @@ export default function Barista() {
     timeZone: 'Asia/Jakarta',
   });
 
+  const handleToggleOpen = async () => {
+    const next = isOpen ? 'tutup' : 'buka';
+    try {
+      await setWarkopStatus(next);
+      await refreshWarkop();
+    } catch (e) {
+      setError(friendlyError(e));
+    }
+  };
+
+  const handleAdvance = async (order: Order) => {
+    const next = NEXT_STATUS[order.status as BoardStatus];
+    if (!next || !order.apiId) return;
+    setError('');
+    try {
+      const extra =
+        next === 'selesai' && order.metodeBayar === 'tunai'
+          ? { tunai_diterima: true }
+          : undefined;
+      await setOrderStatus(order.apiId, next, extra);
+      if (next === 'selesai') {
+        const n = doneCount + 1;
+        setDoneCount(n);
+        try {
+          localStorage.setItem(DONE_KEY, String(n));
+        } catch {
+          // Abaikan, hitungan tetap jalan di memori.
+        }
+      }
+      await refreshQueue();
+    } catch (e) {
+      setError(friendlyError(e));
+    }
+  };
+
+  const handleMarkPaid = async (order: Order) => {
+    setError('');
+    try {
+      await payDummy(order.id);
+      await refreshQueue();
+    } catch (e) {
+      setError(friendlyError(e));
+    }
+  };
+
   return (
     <View>
       <div className="barista-page view-enter">
@@ -70,7 +156,8 @@ export default function Barista() {
               aria-checked={isOpen}
               aria-label="Buka atau tutup warkop"
               className={`open-switch${isOpen ? ' is-on' : ''}`}
-              onClick={() => setIsOpen((v) => !v)}
+              disabled={warkopStatus === null}
+              onClick={() => void handleToggleOpen()}
             >
               <span className="open-knob" />
             </button>
@@ -86,6 +173,12 @@ export default function Barista() {
             <p className="barista-date">{dateLabel}</p>
           </div>
         </div>
+
+        {error && (
+          <p className="cart-error" role="alert">
+            {error}
+          </p>
+        )}
 
         {statusFilter && (
           <div className="chips" role="group" aria-label="Filter status antrean">
@@ -103,35 +196,42 @@ export default function Barista() {
           </div>
         )}
 
-        <div className="kanban-board">
-          {visibleStatuses.includes('Baru') && (
-            <KanbanColumn
-              title="Baru"
-              tone="peach"
-              orders={columns.Baru}
-              onAdvance={advanceBaristaOrder}
-              emptyText="Belum ada pesanan baru."
-            />
-          )}
-          {visibleStatuses.includes('Disiapkan') && (
-            <KanbanColumn
-              title="Disiapkan"
-              tone="teal"
-              orders={columns.Disiapkan}
-              onAdvance={advanceBaristaOrder}
-              emptyText="Belum ada yang disiapkan."
-            />
-          )}
-          {visibleStatuses.includes('Siap') && (
-            <KanbanColumn
-              title="Siap"
-              tone="green"
-              orders={columns.Siap}
-              onAdvance={advanceBaristaOrder}
-              emptyText="Belum ada yang siap diambil."
-            />
-          )}
-        </div>
+        {loading ? (
+          <p className="empty-note">Memuat antrean...</p>
+        ) : (
+          <div className="kanban-board">
+            {visibleStatuses.includes('Baru') && (
+              <KanbanColumn
+                title="Baru"
+                tone="peach"
+                orders={columns.Baru}
+                onAdvance={(o) => void handleAdvance(o)}
+                onMarkPaid={(o) => void handleMarkPaid(o)}
+                emptyText="Belum ada pesanan baru."
+              />
+            )}
+            {visibleStatuses.includes('Disiapkan') && (
+              <KanbanColumn
+                title="Disiapkan"
+                tone="teal"
+                orders={columns.Disiapkan}
+                onAdvance={(o) => void handleAdvance(o)}
+                onMarkPaid={(o) => void handleMarkPaid(o)}
+                emptyText="Belum ada yang disiapkan."
+              />
+            )}
+            {visibleStatuses.includes('Siap') && (
+              <KanbanColumn
+                title="Siap"
+                tone="green"
+                orders={columns.Siap}
+                onAdvance={(o) => void handleAdvance(o)}
+                onMarkPaid={(o) => void handleMarkPaid(o)}
+                emptyText="Belum ada yang siap diambil."
+              />
+            )}
+          </div>
+        )}
 
         {doneCount > 0 && (
           <p className="barista-done-note">{doneCount} pesanan selesai hari ini.</p>

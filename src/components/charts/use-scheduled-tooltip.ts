@@ -23,7 +23,7 @@ function defaultDedupeKey<T>(tooltip: T): string {
       x?: number;
       activeDataKey?: string;
     };
-    // Nearest-point hover: several series can share a row — key on the series too.
+    // Nearest-point hover: several series can share a row - key on the series too.
     const suffix = activeDataKey === undefined ? "" : `:${activeDataKey}`;
     if (typeof x === "number") {
       return `${index}:${Math.round(x)}${suffix}`;
@@ -36,7 +36,7 @@ function defaultDedupeKey<T>(tooltip: T): string {
 /**
  * rAF-coalesced tooltip updates. Keeps the tooltip in React state, or in the
  * caller's store when `setExternal` is given (then `tooltipData` stays `null`
- * here — read it from the store).
+ * here - read it from the store).
  */
 export function useScheduledTooltip<T>(
   setExternal?: React.Dispatch<React.SetStateAction<T | null>>

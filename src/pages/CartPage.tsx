@@ -2,12 +2,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import { CartLines } from '../features/pelanggan/CartPanel';
+import { WarkopClosedBanner } from '../features/pelanggan/WarkopClosed';
 import { useCart } from '../features/pelanggan/cart-context';
+import { useWarkopStatus } from '../lib/warkop';
 import './Pelanggan.css';
 
 export default function CartPage() {
   const { lines, changeQty, count } = useCart();
   const navigate = useNavigate();
+  const { status: warkopStatus, refresh: refreshWarkop } = useWarkopStatus();
+  const closed = warkopStatus === 'tutup';
 
   const handleShopeeFood = () => {
     console.log('[ShopeeFood intent]', {
@@ -22,6 +26,7 @@ export default function CartPage() {
   return (
     <View>
       <div className="pelanggan-page view-enter">
+        <WarkopClosedBanner status={warkopStatus} onRefresh={() => void refreshWarkop()} />
         <GlassCard className="cart-page-card">
           <div className="cart-solid">
             <h2 className="cart-title">Keranjang</h2>
@@ -31,9 +36,10 @@ export default function CartPage() {
                 <button
                   type="button"
                   className="btn btn-primary cart-submit"
+                  disabled={closed}
                   onClick={() => navigate('/pelanggan/checkout')}
                 >
-                  Lanjut ke checkout ({count} item)
+                  {closed ? 'Warkop tutup, pesanan dijeda' : `Lanjut ke checkout (${count} item)`}
                 </button>
                 <a
                   href="#"

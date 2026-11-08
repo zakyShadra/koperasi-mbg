@@ -100,7 +100,7 @@ export function useAnimatedSeriesPath({
   const prevSettledYDomainKeyRef = useRef(settledYDomainKey);
 
   // Live scale/data inputs for the running tween. The y-domain tween rebuilds
-  // `yScale` every frame, so these must not be effect deps — otherwise the
+  // `yScale` every frame, so these must not be effect deps - otherwise the
   // effect cleanup stops the path tween after its first frame.
   const latestRef = useRef({
     renderData,
@@ -143,7 +143,7 @@ export function useAnimatedSeriesPath({
     durationMs > 0 &&
     renderData.length > 0;
 
-  // Drop a stale tween frame as soon as animation is no longer allowed —
+  // Drop a stale tween frame as soon as animation is no longer allowed -
   // adjusted during render rather than via setState in the effect below.
   if (!shouldAnimate && animatedPath !== null) {
     setAnimatedPath(null);
@@ -190,7 +190,7 @@ export function useAnimatedSeriesPath({
       : flattenSeriesPath(from.points, curve);
     // When new data also moves the y-domain, hold the line in place while the
     // grid and y-axis tween to the new scale, then morph straight to its
-    // settled pixels — morphing against the mid-tween scale sends the line
+    // settled pixels - morphing against the mid-tween scale sends the line
     // far outside the plot when the magnitude changes (e.g. ~15k → ~10).
     const holdForYDomain = morph && dataChanged && yDomainChanged;
 

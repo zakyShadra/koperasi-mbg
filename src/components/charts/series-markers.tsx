@@ -197,9 +197,9 @@ export function SeriesMarkers({
     );
   }
 
-  // Stable base layer — its children come from the parent and stay
+  // Stable base layer - its children come from the parent and stay
   // referentially identical when the dim wrapper re-renders for hover.
-  // Plain dots render as bare circles (no component per point) — same
+  // Plain dots render as bare circles (no component per point) - same
   // output as `StaticSeriesPointMarker`, a fraction of the mount cost.
   const plainDots = strokeWidth <= 0 && outlineWidth <= 0;
   const baseMarkers = points.map((point) =>

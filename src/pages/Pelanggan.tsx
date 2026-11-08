@@ -1,85 +1,70 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { productsKoperasi, productsWarkop } from '../lib/dummy';
+import { friendlyError, getCatalog, mapProduct } from '../lib/api';
+import type { Product } from '../lib/dummy';
+import { useWarkopStatus } from '../lib/warkop';
 import { View } from '../components/View';
 import { SlidingTabs } from '../components/SlidingTabs';
 import { ProductCard } from '../features/pelanggan/ProductCard';
 import { PelangganLoader } from '../features/pelanggan/PelangganLoader';
+import { WarkopClosedBanner } from '../features/pelanggan/WarkopClosed';
 import { useCart } from '../features/pelanggan/cart-context';
 import './Pelanggan.css';
 
 type CatalogTab = 'koperasi' | 'warkop';
 
-function randomLoadMs(): number {
-  return 1500 + Math.random() * 1000;
-}
-
-// Katalog saja. Keranjang, checkout, dan lacak pesanan sudah jadi halaman
-// sendiri (/pelanggan/keranjang, /pelanggan/checkout, /pelanggan/lacak).
-// Keranjang tinggal di CartProvider supaya tidak hilang saat pindah halaman.
 export default function Pelanggan() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { add, count: cartCount } = useCart();
   const tab: CatalogTab = searchParams.get('tab') === 'warkop' ? 'warkop' : 'koperasi';
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [loaderText, setLoaderText] = useState('Memuat katalog...');
-  const [loadCycle, setLoadCycle] = useState(0);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [gridReady, setGridReady] = useState(false);
-  const timers = useRef<number[]>([]);
+  const { status: warkopStatus, refresh: refreshWarkop } = useWarkopStatus();
+  const closed = warkopStatus === 'tutup';
 
-  const handleLoaderDone = useCallback(() => {
-    setLoadCycle((c) => c + 1);
-    setGridReady(true);
-  }, []);
-
-  const startLoad = useCallback((text: string) => {
-    setLoaderText(text);
-    setGridReady(false);
+  const loadCatalog = useCallback(async () => {
+    setLoadError('');
     setLoading(true);
-    const id = window.setTimeout(() => {
+    try {
+      const items = await getCatalog();
+      setProducts(items.map(mapProduct));
+    } catch (e) {
+      setLoadError(friendlyError(e));
+    } finally {
       setLoading(false);
-    }, randomLoadMs());
-    timers.current.push(id);
+    }
   }, []);
 
   useEffect(() => {
-    setLoaderText('Memuat katalog...');
-    setGridReady(false);
-    setLoading(true);
-    const id = window.setTimeout(() => {
-      setLoading(false);
-    }, randomLoadMs());
-    return () => window.clearTimeout(id);
+    void loadCatalog();
+  }, [loadCatalog]);
+
+  const handleLoaderDone = useCallback(() => {
+    setGridReady(true);
   }, []);
 
-  useEffect(
-    () => () => {
-      timers.current.forEach((t) => window.clearTimeout(t));
-    },
-    [],
-  );
-
-  const products = tab === 'koperasi' ? productsKoperasi : productsWarkop;
-
-  const filtered = useMemo(() => {
+  const visible = useMemo(() => {
+    const list = products.filter((p) => p.category === tab);
     const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter((p) => p.name.toLowerCase().includes(q));
-  }, [products, query]);
+    if (!q) return list;
+    return list.filter((p) => p.name.toLowerCase().includes(q));
+  }, [products, query, tab]);
 
   const handleTabChange = (id: string) => {
     const next = id === 'warkop' ? 'warkop' : 'koperasi';
     if (next === tab) return;
     setSearchParams(next === 'warkop' ? { tab: 'warkop' } : {});
-    startLoad('Memuat katalog...');
   };
 
   return (
     <View>
       <div className="pelanggan-page view-enter">
-        <PelangganLoader active={loading} text={loaderText} onDone={handleLoaderDone} />
+        <PelangganLoader active={loading} text="Memuat katalog..." onDone={handleLoaderDone} />
+        <WarkopClosedBanner status={warkopStatus} onRefresh={() => void refreshWarkop()} />
 
         <div className="pelanggan-header">
           <label className="pelanggan-search">
@@ -99,13 +84,6 @@ export default function Pelanggan() {
             >
               Keranjang
               {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => startLoad('Memuat katalog...')}
-            >
-              Coba Loading
             </button>
           </div>
         </div>
@@ -131,12 +109,29 @@ export default function Pelanggan() {
                 </div>
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : loadError ? (
+            <div className="catalog-empty">
+              <p>{loadError}</p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void loadCatalog()}
+              >
+                Muat ulang
+              </button>
+            </div>
+          ) : visible.length === 0 ? (
             <p className="catalog-empty">Tidak ada barang yang cocok dengan pencarian.</p>
           ) : (
-            <div key={loadCycle} className="product-grid product-grid-enter">
-              {filtered.map((product, i) => (
-                <ProductCard key={product.id} product={product} onAdd={add} delay={i * 50} />
+            <div key={tab} className="product-grid product-grid-enter">
+              {visible.map((product, i) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAdd={add}
+                  delay={i * 50}
+                  disabled={closed}
+                />
               ))}
             </div>
           )}

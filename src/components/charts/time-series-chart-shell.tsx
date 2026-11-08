@@ -143,7 +143,7 @@ interface ClassifiedChartChildren {
   underlayChildren: ReactElement[];
   preOverlayChildren: ReactElement[];
   postOverlayChildren: ReactElement[];
-  /** A lazy child had not loaded yet — classification is provisional. */
+  /** A lazy child had not loaded yet - classification is provisional. */
   hasPendingLazyChild: boolean;
 }
 
@@ -202,7 +202,7 @@ export interface TimeSeriesChartInnerProps {
   animationDuration: number;
   animationEasing?: string;
   enterTransition?: Transition;
-  /** Signature of motion URL state — triggers reveal replay when it changes. */
+  /** Signature of motion URL state - triggers reveal replay when it changes. */
   revealSignature?: string;
   children: ReactNode;
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -230,12 +230,12 @@ export interface TimeSeriesChartInnerProps {
   extraDomainKeysByAxis?: Record<string, string[]>;
   /**
    * Y-axis ids whose domain floats around the data (padded min..max) instead
-   * of anchoring at zero — e.g. the axis a `<Candlestick>` draws on.
+   * of anchoring at zero - e.g. the axis a `<Candlestick>` draws on.
    */
   floatingYAxisIds?: readonly string[];
   /** Per-axis domain overrides applied on top of the auto domain. */
   yDomainOverrides?: Record<string, YDomainOverride>;
-  /** Loading vs ready — drives chart phase until transition orchestration lands. */
+  /** Loading vs ready - drives chart phase until transition orchestration lands. */
   chartStatus?: ChartStatus;
   loadingLabel?: string;
   /** Animate y-domain on status / data transitions. Default: true */
@@ -294,7 +294,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
   tweenYDomainOnXDomainChange = false,
   onPhaseChange,
 }: TimeSeriesChartInnerProps) {
-  // Unique per instance — shared clipPath ids crop later charts (#226).
+  // Unique per instance - shared clipPath ids crop later charts (#226).
   const uniqueClipPathId = `${clipPathId}-${useId().replace(/:/g, "")}`;
   const staticPreview = useStaticChartPreview();
   const innerWidth = width - margin.left - margin.right;
@@ -443,7 +443,7 @@ export const TimeSeriesChartInner = memo(function TimeSeriesChartCore({
     let maxTime = xDomain
       ? xDomain[1].getTime()
       : (extent(plotData, (d) => xAccessor(d).getTime())[1] ?? minTime);
-    // Brush defines the viewport — projection horizon is included via brush
+    // Brush defines the viewport - projection horizon is included via brush
     // track extent, not by extending past the selection on the main chart.
     if (!xDomain) {
       maxTime = mergeProjectionXDomainMax(maxTime, projectionConfigs);

@@ -1,0 +1,1 @@
+{"dependencies":{},"exceptionLogging":"STACKDRIVER","runtimeVersion":"V8","timeZone":"Asia/Jakarta","webapp":{"access":"ANYONE_ANONYMOUS","executeAs":"USER_DEPLOYING"}}

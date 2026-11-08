@@ -1,0 +1,29 @@
+name = "koperasi-mbg-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-08"
+workers_dev = true
+
+# Free tier only: Workers + D1. No paid bindings.
+
+[[d1_databases]]
+binding = "DB"
+database_name = "koperasi-mbg"
+database_id = "1080218b-58f3-480c-ae88-4faf60a532ca"
+
+# API on the custom domain. Works once the DNS record below exists.
+[[routes]]
+pattern = "koperasimbg.ices.my.id/api/*"
+zone_name = "ices.my.id"
+
+[vars]
+# DEV_MODE=true keeps the dev OTP code in the request-otp response.
+# Remove (set to "false") at launch. See README.md.
+DEV_MODE = "true"
+ADMIN_TELEGRAM_ID = "8776702375"
+# QRIS dummy config. Replace with the real NMID after merchant registration.
+# A dummy QRIS never moves real money. See README.md.
+QRIS_MERCHANT_NAME = "KOPERASI MBG (DUMMY)"
+QRIS_MERCHANT_CITY = "BANDUNG"
+QRIS_NMID = "ID1020000000000"
+QRIS_MERCHANT_ID = "000000000000000"
+QRIS_MCC = "5812"

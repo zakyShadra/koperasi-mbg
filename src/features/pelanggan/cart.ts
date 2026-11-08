@@ -16,10 +16,15 @@ export interface PlacedOrder {
   name: string;
   wa: string;
   methodLabel: string;
+  methodId?: PaymentMethodId;
   total: number;
   itemCount: number;
   items: PlacedOrderItem[];
   createdAt: string;
+  qrisPayload?: string;
+  qrisDummy?: boolean;
+  status?: string;
+  orderId?: number;
 }
 
 // Fungsi murni keranjang: satu modul, satu pekerjaan. Tidak ada fetch,
@@ -56,14 +61,6 @@ export function cartCount(lines: CartLine[]): number {
 
 export function cartTotal(lines: CartLine[]): number {
   return lines.reduce((sum, line) => sum + line.product.price * line.qty, 0);
-}
-
-export function makeOrderNumber(): string {
-  const d = new Date();
-  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(
-    d.getDate(),
-  ).padStart(2, '0')}`;
-  return `MBG-${stamp}-${String(Math.floor(1000 + Math.random() * 9000))}`;
 }
 
 // Metode bayar sebagai data, bukan if/else di checkout. Tambah metode

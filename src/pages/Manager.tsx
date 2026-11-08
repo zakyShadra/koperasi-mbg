@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
@@ -6,8 +6,9 @@ import StatCard from '../components/StatCard';
 import { OmzetBarChart } from '../components/MbgCharts';
 import OrderTable from '../components/OrderTable';
 import View from '../components/View';
-import { managerStats, omzet7Hari, recentOrders } from '../lib/dummy';
-import { fmtRp } from '../lib/format';
+import { SHEET_URL, friendlyError, getOrders, getOmzetReport, getStats, mapApiOrder } from '../lib/api';
+import { fillDaily, fmtRp, rangeDays, weekdayShort } from '../lib/format';
+import type { Order } from '../lib/dummy';
 import './Manager.css';
 
 const MANAGER_ICONS: ReactNode[] = [
@@ -35,24 +36,86 @@ const MANAGER_ICONS: ReactNode[] = [
 ];
 
 export default function Manager() {
+  const [stats, setStats] = useState<{
+    anggota_aktif: number;
+    stok_menipis: number;
+    pesanan_hari_ini: number;
+    omzet_hari_ini: number;
+    pesanan_selesai_hari_ini: number;
+  } | null>(null);
+  const [daily, setDaily] = useState<{ tanggal: string; pesanan: number; omzet: number }[]>([]);
+  const [recent, setRecent] = useState<Order[]>([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { from, to } = rangeDays(7);
+        const [s, report, orders] = await Promise.all([
+          getStats(),
+          getOmzetReport(from, to),
+          getOrders(undefined, 6),
+        ]);
+        setStats(s);
+        setDaily(fillDaily(from, to, report.daily));
+        setRecent(orders.map(mapApiOrder));
+      } catch (e) {
+        setError(friendlyError(e));
+      }
+    };
+    void load();
+  }, []);
+
   const chartData = useMemo(
-    () => omzet7Hari.map((d) => ({ day: d.day, value: d.value })),
-    [],
+    () => daily.map((d) => ({ day: weekdayShort(d.tanggal), value: d.omzet })),
+    [daily],
   );
-  const totalOmzet = useMemo(() => omzet7Hari.reduce((sum, d) => sum + d.value, 0), []);
+  const totalOmzet = useMemo(() => daily.reduce((sum, d) => sum + d.omzet, 0), [daily]);
   const maxIndex = useMemo(() => {
     let best = 0;
-    omzet7Hari.forEach((d, i) => {
-      if (d.value > omzet7Hari[best].value) best = i;
+    daily.forEach((d, i) => {
+      if (d.omzet > daily[best].omzet) best = i;
     });
     return best;
-  }, []);
+  }, [daily]);
+
+  const statCards = [
+    {
+      label: 'Omzet hari ini',
+      value: stats ? fmtRp(stats.omzet_hari_ini) : 'Memuat...',
+      delta: stats ? `${stats.pesanan_selesai_hari_ini} pesanan selesai hari ini` : undefined,
+      deltaUp: true,
+    },
+    {
+      label: 'Pesanan hari ini',
+      value: stats ? String(stats.pesanan_hari_ini) : 'Memuat...',
+      delta: undefined,
+      deltaUp: undefined,
+    },
+    {
+      label: 'Anggota aktif',
+      value: stats ? String(stats.anggota_aktif) : 'Memuat...',
+      delta: undefined,
+      deltaUp: undefined,
+    },
+    {
+      label: 'Stok menipis',
+      value: stats ? String(stats.stok_menipis) : 'Memuat...',
+      delta: stats && stats.stok_menipis > 0 ? 'Perlu restock' : undefined,
+      deltaUp: false,
+    },
+  ];
 
   return (
     <View>
       <div className="manager-page">
+        {error && (
+          <p className="cart-error" role="alert">
+            {error}
+          </p>
+        )}
         <section className="stats-row" aria-label="Ringkasan hari ini">
-          {managerStats.map((s, i) => (
+          {statCards.map((s, i) => (
             <StatCard
               key={s.label}
               label={s.label}
@@ -72,7 +135,10 @@ export default function Manager() {
               <span className="card-total">{fmtRp(totalOmzet)}</span>
             </div>
             <OmzetBarChart data={chartData} />
-            <p className="card-foot">Total 7 hari: {fmtRp(totalOmzet)}. Hari tertinggi: {omzet7Hari[maxIndex].day}.</p>
+            <p className="card-foot">
+              Total 7 hari: {fmtRp(totalOmzet)}.
+              {daily.length > 0 ? ` Hari tertinggi: ${weekdayShort(daily[maxIndex].tanggal)}.` : ''}
+            </p>
           </GlassCard>
           <GlassCard className="manager-links stagger" style={{ '--d': '250ms' } as CSSProperties}>
             <div className="card-head">
@@ -86,6 +152,9 @@ export default function Manager() {
               <Link to="/manager/laporan" className="btn btn-secondary">
                 Laporan
               </Link>
+              <a className="btn btn-secondary" href={SHEET_URL} target="_blank" rel="noreferrer">
+                Buka Spreadsheet
+              </a>
             </div>
           </GlassCard>
         </section>
@@ -94,7 +163,7 @@ export default function Manager() {
           <div className="card-head">
             <h2>Pesanan terbaru</h2>
           </div>
-          <OrderTable orders={recentOrders} />
+          <OrderTable orders={recent} />
         </GlassCard>
       </div>
     </View>

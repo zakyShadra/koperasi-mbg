@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 export interface PatternTileProps {
-  /** Unique id — reference it as `fill="url(#id)"`. */
+  /** Unique id - reference it as `fill="url(#id)"`. */
   id: string;
   /** Tile artwork. Paint with `currentColor` so `color` drives it. */
   children: ReactNode;

@@ -143,7 +143,7 @@ export function useAnimatedYDomains({
   const [animatedByAxis, setAnimatedByAxis] = useState(destinationByAxis);
 
   // Only grid-tween phases and (opt-in) ready-phase target changes animate.
-  // Everything else snaps — resolved during render so the new domain lands in
+  // Everything else snaps - resolved during render so the new domain lands in
   // the same commit as the data (a snap from an effect would paint a frame
   // with the old y-scale, then re-render).
   const mayTween =

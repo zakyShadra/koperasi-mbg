@@ -50,7 +50,7 @@ export interface TooltipBoxProps {
   /**
    * X (container px) that decides which side the panel opens on. Default: `x`.
    * Nearest-point hover passes the column x so every point in a column opens
-   * on the same side (no flip — and entrance replay — between nearby points).
+   * on the same side (no flip - and entrance replay - between nearby points).
    */
   flipX?: number;
   /** Per-chart override; falls back to `ChartConfigProvider.tooltipBoxSpring`. */
@@ -88,7 +88,7 @@ export interface TooltipBoxProps {
 
 /**
  * Popover-style panel: rounded, 1px border, soft layered shadow and a 1px
- * edge highlight (`before:`) — matches shadcn / coss popovers using only theme
+ * edge highlight (`before:`) - matches shadcn / coss popovers using only theme
  * tokens (`border`, `--radius`) and Tailwind utilities.
  */
 export const TOOLTIP_PANEL_CLASS_NAME =
@@ -154,7 +154,7 @@ function readPxRadius(element: HTMLElement): number | null {
 
 /**
  * Radius `r` (px) as per-axis percentages of the drawn (scaled) size, so the
- * corners stay round while the box is scaled — Motion's own correction.
+ * corners stay round while the box is scaled - Motion's own correction.
  */
 function correctedRadius(r: number, width: number, height: number): string {
   const x = width === 0 ? 0 : (r / width) * 100;
@@ -253,11 +253,11 @@ function drawPanelTween(
  * `m` + `domAnimation`).
  *
  * When the panel's layout size changes, it is drawn at its previous size and
- * scaled to the new one with `PANEL_SIZE_SPRING` — a 0 → 1000 progress with
+ * scaled to the new one with `PANEL_SIZE_SPRING` - a 0 → 1000 progress with
  * velocity 0 that starts on the next frame, like Motion's layout animation.
  * The clip box follows the panel (kept at its unscaled border offset) and the
  * content is counter-scaled, so it is drawn at its final size and revealed by
- * the clip — text never stretches. Radii are corrected per axis so the
+ * the clip - text never stretches. Radii are corrected per axis so the
  * corners stay round. A change mid-tween restarts from the size drawn now.
  *
  * Sizes are layout sizes (computed `width` / `height`, unaffected by
@@ -549,7 +549,7 @@ function TooltipBoxInner({
   const effectiveSpring = springConfig ?? tooltipBoxSpring;
 
   const tooltipRef = useRef<HTMLDivElement>(null);
-  // Last measured panel size — only read in the layout effect below.
+  // Last measured panel size - only read in the layout effect below.
   const tooltipWidthRef = useRef(DEFAULT_TOOLTIP_WIDTH);
   const tooltipHeightRef = useRef(DEFAULT_TOOLTIP_HEIGHT);
   // Non-animated position: React only renders the mount position; the layout

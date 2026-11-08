@@ -46,7 +46,7 @@ export const AreaGradientDefs = memo(function AreaGradientDefs({
 }: AreaGradientDefsProps) {
   const sides = resolveFadeSides(fadeEdges);
   // Stroke gradient mirrors the area's edge fade so the line doesn't pop in
-  // past the faded fill. Skip emitting it when neither edge fades — the line
+  // past the faded fill. Skip emitting it when neither edge fades - the line
   // can then paint a solid stroke instead of an unnecessary url(#...) ref.
   const strokeStops = sides.any ? fadeGradientStops(sides) : null;
   const showEdgeMask = sides.any && !isPatternFill;

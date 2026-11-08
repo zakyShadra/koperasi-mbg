@@ -18,13 +18,13 @@ export interface HighlightSegmentGlow {
 }
 
 export interface HighlightSegmentProps {
-  /** Ref to the rendered base stroke `<path>` — its `d` is re-used verbatim. */
+  /** Ref to the rendered base stroke `<path>` - its `d` is re-used verbatim. */
   pathRef: RefObject<SVGPathElement | null>;
   /** Whether to render (caller gates on showHighlight + active + loaded). */
   visible: boolean;
   stroke: string;
   strokeWidth: number;
-  /** Plot height — the clip band spans it fully. */
+  /** Plot height - the clip band spans it fully. */
   height: number;
   /** Spring-eased left edge of the clip band (px). */
   x: MotionValue<number>;
@@ -64,7 +64,7 @@ export function HighlightSegment({
   } | null>(null);
 
   // Copy the base stroke's `d` after commit (before paint) instead of reading
-  // `pathRef.current` during render — same frame, and it picks up the base
+  // `pathRef.current` during render - same frame, and it picks up the base
   // path's `d` from this commit rather than the previous one. Runs on every
   // commit (hover moves included) but only writes when the base `d` or the
   // target elements changed: re-setting a long `d` re-parses the path.

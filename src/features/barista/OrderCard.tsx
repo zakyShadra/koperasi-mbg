@@ -75,15 +75,19 @@ function actionLabel(status: OrderStatus, isDraft: boolean): string | null {
 export interface OrderCardProps {
   order: Order;
   onAdvance: (order: Order) => void;
+  onMarkPaid?: (order: Order) => void;
   delay?: number;
 }
 
-export function OrderCard({ order, onAdvance, delay = 0 }: OrderCardProps) {
+export function OrderCard({ order, onAdvance, onMarkPaid, delay = 0 }: OrderCardProps) {
   const isDraft = orderIsDraft(order);
   const label = actionLabel(order.status, isDraft);
   const waiting = orderWaiting(order);
   const items = orderItems(order);
   const source = order.source === 'ShopeeFood' ? 'ShopeeFood' : 'Web';
+  const needsPayment =
+    order.status === 'Siap' && order.statusBayar === 'belum' && order.metodeBayar !== 'tunai';
+  const draftMinutesLeft = isDraft ? Math.max(0, 3 - waiting) : 0;
 
   return (
     <GlassCard className="order-card" style={{ animationDelay: `${delay}ms` }}>
@@ -111,7 +115,18 @@ export function OrderCard({ order, onAdvance, delay = 0 }: OrderCardProps) {
         {waiting} mnt menunggu
       </p>
       {isDraft && order.status === 'Baru' && (
-        <p className="order-draft-warning">Draft, cek item dulu</p>
+        <p className="order-draft-warning">
+          Draft, cek item dulu, sisa {draftMinutesLeft} mnt sebelum auto-batal
+        </p>
+      )}
+      {needsPayment && onMarkPaid && (
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm order-action"
+          onClick={() => onMarkPaid(order)}
+        >
+          Tandai lunas (dummy)
+        </button>
       )}
       {label && (
         <button type="button" className="btn btn-primary btn-sm order-action" onClick={() => onAdvance(order)}>
