@@ -30,6 +30,8 @@ type TransactionFormProps = {
   onSubmit: (tx: NewTransactionInput) => void | Promise<void>;
   serverError?: string;
   mode?: 'modal' | 'page';
+  initial?: NewTransactionInput;
+  submitLabel?: string;
 };
 
 export function TransactionForm({
@@ -38,6 +40,8 @@ export function TransactionForm({
   onSubmit,
   serverError,
   mode = 'modal',
+  initial,
+  submitLabel,
 }: TransactionFormProps) {
   const [note, setNote] = useState('');
   const [category, setCategory] = useState<string>(TRANSACTION_CATEGORIES[0]);
@@ -49,14 +53,14 @@ export function TransactionForm({
 
   useEffect(() => {
     if (!open) return;
-    setNote('');
-    setCategory(TRANSACTION_CATEGORIES[0]);
-    setAmount('');
-    setJenis('Masuk');
-    setMetode('tunai');
+    setNote(initial?.note ?? '');
+    setCategory(initial?.category ?? TRANSACTION_CATEGORIES[0]);
+    setAmount(String(initial ? initial.masuk || initial.keluar : ''));
+    setJenis(initial && initial.keluar > 0 ? 'Keluar' : 'Masuk');
+    setMetode(initial?.metode ?? 'tunai');
     setError('');
     setSubmitting(false);
-  }, [open]);
+  }, [open, initial]);
 
   useEffect(() => {
     if (!open) return;
@@ -95,10 +99,15 @@ export function TransactionForm({
     }
   };
 
+  const categoryOptions =
+    initial && !TRANSACTION_CATEGORIES.includes(initial.category as (typeof TRANSACTION_CATEGORIES)[number])
+      ? [initial.category, ...TRANSACTION_CATEGORIES]
+      : [...TRANSACTION_CATEGORIES];
+
   const formBody = (
     <>
       <div className="card-head">
-        <h2 id="tx-form-title">Tambah transaksi</h2>
+        <h2 id="tx-form-title">{initial ? 'Ubah transaksi' : 'Tambah transaksi'}</h2>
         <button type="button" className="tx-modal-close" onClick={onClose} aria-label="Tutup">
           Tutup
         </button>
@@ -119,7 +128,7 @@ export function TransactionForm({
         <label className="tx-field" htmlFor="tx-category">
           <span>Kategori</span>
           <select id="tx-category" value={category} onChange={(e) => setCategory(e.target.value)}>
-            {TRANSACTION_CATEGORIES.map((c) => (
+            {categoryOptions.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
@@ -169,7 +178,7 @@ export function TransactionForm({
             Batal
           </button>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Menyimpan...' : 'Simpan transaksi'}
+            {submitting ? 'Menyimpan...' : (submitLabel ?? 'Simpan transaksi')}
           </button>
         </div>
       </form>

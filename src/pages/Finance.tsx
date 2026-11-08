@@ -6,8 +6,16 @@ import StatCard from '../components/StatCard';
 import { CashFlowChart, CategoryDonut } from '../components/MbgCharts';
 import View from '../components/View';
 import UpdatedHint from '../components/UpdatedHint';
-import { TRANSACTION_CATEGORIES } from '../features/finance/TransactionForm';
-import { SHEET_URL, friendlyError, getCashReport, getTransactions } from '../lib/api';
+import { TRANSACTION_CATEGORIES, TransactionForm } from '../features/finance/TransactionForm';
+import type { NewTransactionInput } from '../features/finance/TransactionForm';
+import {
+  SHEET_URL,
+  deleteTransaction,
+  friendlyError,
+  getCashReport,
+  getTransactions,
+  updateTransaction,
+} from '../lib/api';
 import { usePolling } from '../lib/usePolling';
 import type { ApiTransaction } from '../lib/api';
 import type { Transaction } from '../lib/dummy';
@@ -52,10 +60,16 @@ function csvEscape(value: string): string {
 
 export default function Finance() {
   const [txs, setTxs] = useState<Transaction[]>([]);
+  const [rawTxs, setRawTxs] = useState<ApiTransaction[]>([]);
   const [cash, setCash] = useState<{ masuk: number; keluar: number; saldo: number } | null>(null);
   const [donutData, setDonutData] = useState<{ label: string; value: number; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<ApiTransaction | null>(null);
+  const [editServerError, setEditServerError] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
+  const [actionError, setActionError] = useState('');
+  const [actionNotice, setActionNotice] = useState('');
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -74,6 +88,7 @@ export default function Finance() {
         getCashReport(monthStart, today),
       ]);
       const mapped = list.map(mapTransaction);
+      setRawTxs(list);
       setTxs(mapped);
       setCash({ masuk: report.masuk, keluar: report.keluar, saldo: report.saldo });
       const byCategory = new Map<string, number>();
@@ -149,6 +164,61 @@ export default function Finance() {
     return [...filtered].sort((a, b) => parseTxDate(b.date) - parseTxDate(a.date));
   }, [txs, search, categoryFilter]);
 
+  const rawByKode = useMemo(
+    () => new Map(rawTxs.map((t) => [t.kode, t])),
+    [rawTxs],
+  );
+
+  const editingInitial = useMemo<NewTransactionInput | undefined>(() => {
+    if (!editing) return undefined;
+    return {
+      note: editing.keterangan ?? '',
+      category: editing.kategori ?? TRANSACTION_CATEGORIES[0],
+      masuk: editing.jenis === 'penarikan' ? 0 : editing.jumlah,
+      keluar: editing.jenis === 'penarikan' ? editing.jumlah : 0,
+      metode: editing.metode,
+    };
+  }, [editing]);
+
+  const handleEditSubmit = async (input: NewTransactionInput) => {
+    if (!editing) return;
+    setEditServerError('');
+    const jenis =
+      input.masuk > 0
+        ? input.category === 'Iuran anggota'
+          ? 'simpanan'
+          : 'pembayaran'
+        : 'penarikan';
+    try {
+      await updateTransaction(editing.id, {
+        jenis,
+        jumlah: input.masuk > 0 ? input.masuk : input.keluar,
+        metode: input.metode,
+        kategori: input.category,
+        keterangan: input.note,
+      });
+      setEditing(null);
+      setActionNotice('Transaksi diubah.');
+      setActionError('');
+      await load();
+    } catch (e) {
+      setEditServerError(friendlyError(e));
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    setActionError('');
+    setActionNotice('');
+    try {
+      await deleteTransaction(id);
+      setConfirmingDelete(null);
+      setActionNotice('Transaksi dihapus.');
+      await load();
+    } catch (e) {
+      setActionError(friendlyError(e));
+    }
+  };
+
   const financeStats = [
     { label: 'Kas masuk bulan ini', value: cash ? fmtRp(cash.masuk) : 'Memuat...' },
     { label: 'Kas keluar bulan ini', value: cash ? fmtRp(cash.keluar) : 'Memuat...' },
@@ -210,6 +280,16 @@ export default function Finance() {
             {error}
           </p>
         )}
+        {actionNotice && (
+          <p className="demo-notice" role="status">
+            {actionNotice}
+          </p>
+        )}
+        {actionError && (
+          <p className="demo-notice" role="alert">
+            {actionError}
+          </p>
+        )}
 
         <section className="finance-mid">
           <GlassCard className="tx-card stagger" style={{ '--d': '200ms' } as CSSProperties}>
@@ -260,32 +340,81 @@ export default function Finance() {
                     <th className="num">Masuk</th>
                     <th className="num">Keluar</th>
                     <th className="num">Saldo berjalan</th>
+                    <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="table-empty">
+                      <td colSpan={7} className="table-empty">
                         Memuat transaksi...
                       </td>
                     </tr>
                   ) : (
-                    visibleTxs.map((t) => (
-                      <tr key={t.id}>
-                        <td>{t.date}</td>
-                        <td>{t.note}</td>
-                        <td>
-                          <span className="pill category-pill">{t.category}</span>
-                        </td>
-                        <td className="num tx-in">{t.masuk > 0 ? fmtRp(t.masuk) : '-'}</td>
-                        <td className="num tx-out">{t.keluar > 0 ? fmtRp(t.keluar) : '-'}</td>
-                        <td className="num tx-balance">{fmtRp(balanceById.get(t.id) ?? 0)}</td>
-                      </tr>
-                    ))
+                    visibleTxs.map((t) => {
+                      const raw = rawByKode.get(t.id);
+                      const deleting = raw ? confirmingDelete === raw.id : false;
+                      return (
+                        <tr key={t.id}>
+                          <td>{t.date}</td>
+                          <td>{t.note}</td>
+                          <td>
+                            <span className="pill category-pill">{t.category}</span>
+                          </td>
+                          <td className="num tx-in">{t.masuk > 0 ? fmtRp(t.masuk) : '-'}</td>
+                          <td className="num tx-out">{t.keluar > 0 ? fmtRp(t.keluar) : '-'}</td>
+                          <td className="num tx-balance">{fmtRp(balanceById.get(t.id) ?? 0)}</td>
+                          <td>
+                            {raw && (
+                              <span className="tx-row-actions">
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={() => {
+                                    setEditing(raw);
+                                    setEditServerError('');
+                                    setActionError('');
+                                    setActionNotice('');
+                                  }}
+                                >
+                                  Ubah
+                                </button>
+                                {deleting ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm tx-delete-confirm"
+                                      onClick={() => void handleDelete(raw.id)}
+                                    >
+                                      Ya, hapus
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn btn-secondary btn-sm"
+                                      onClick={() => setConfirmingDelete(null)}
+                                    >
+                                      Batal
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm tx-delete"
+                                    onClick={() => setConfirmingDelete(raw.id)}
+                                  >
+                                    Hapus
+                                  </button>
+                                )}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                   {!loading && visibleTxs.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="table-empty">
+                      <td colSpan={7} className="table-empty">
                         Tidak ada transaksi yang cocok.
                       </td>
                     </tr>
@@ -316,6 +445,18 @@ export default function Finance() {
           <p className="card-foot">Kas masuk vs kas keluar per hari, dari transaksi tercatat.</p>
         </GlassCard>
       </div>
+      <TransactionForm
+        open={editing !== null}
+        mode="modal"
+        initial={editingInitial}
+        submitLabel="Simpan perubahan"
+        serverError={editServerError}
+        onClose={() => {
+          setEditing(null);
+          setEditServerError('');
+        }}
+        onSubmit={(input) => void handleEditSubmit(input)}
+      />
     </View>
   );
 }

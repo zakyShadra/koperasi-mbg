@@ -451,6 +451,24 @@ export async function createTransaction(input: {
   return apiFetch('/api/finance/transactions', { method: 'POST', body: input });
 }
 
+export async function updateTransaction(
+  id: number,
+  input: {
+    jenis?: string;
+    jumlah?: number;
+    metode?: string;
+    kategori?: string;
+    keterangan?: string;
+    nomor_pesanan?: string | null;
+  },
+): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/finance/transactions/${id}`, { method: 'PUT', body: input });
+}
+
+export async function deleteTransaction(id: number): Promise<{ ok: boolean }> {
+  return apiFetch(`/api/finance/transactions/${id}`, { method: 'DELETE' });
+}
+
 export async function getOmzetReport(
   from: string,
   to: string,
