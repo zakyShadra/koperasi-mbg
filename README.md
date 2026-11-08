@@ -6,6 +6,12 @@ TypeScript, tampilannya liquid glass di atas foto dermaga kiriman Zaky.
 
 Status: UI + alur demo jalan. Data masih dummy, backend belum ada.
 
+Repo: https://github.com/zakyShadra/koperasi-mbg
+
+Live (GitHub Pages): https://zakyshadra.github.io/koperasi-mbg/
+
+Setiap push ke `main` otomatis ke-deploy ulang lewat GitHub Actions.
+
 ## Cara jalanin
 
 ```bash
