@@ -231,6 +231,32 @@ function maskWa(wa: string): string {
   return d.slice(0, 4) + "****" + d.slice(-4);
 }
 
+function rateLimited(req: Request): Response {
+  return new Response(JSON.stringify({ ok: false, error: "terlalu_banyak_permintaan_coba_lagi_nanti" }), {
+    status: 429,
+    headers: { "content-type": "application/json", "retry-after": "60", ...corsHeaders(req) },
+  });
+}
+
+async function checkRateLimit(env: Env, req: Request, route: string, limit: number, windowMs: number): Promise<boolean> {
+  try {
+    const fwd = req.headers.get("X-Forwarded-For") ?? "";
+    const ip = req.headers.get("CF-Connecting-IP") ?? fwd.split(",")[0]?.trim() ?? "unknown";
+    const now = Date.now();
+    const windowStart = Math.floor(now / windowMs) * windowMs;
+    await env.DB.prepare("DELETE FROM rate_limit WHERE route = ? AND window_start < ?").bind(route, now - windowMs).run();
+    await env.DB.prepare(
+      "INSERT INTO rate_limit (ip, route, window_start, count) VALUES (?, ?, ?, 1) ON CONFLICT(ip, route, window_start) DO UPDATE SET count = count + 1"
+    ).bind(ip, route, windowStart).run();
+    const row = await env.DB.prepare("SELECT count FROM rate_limit WHERE ip = ? AND route = ? AND window_start = ?")
+      .bind(ip, route, windowStart)
+      .first<{ count: number }>();
+    return (row?.count ?? 0) <= limit;
+  } catch {
+    return true;
+  }
+}
+
 // ---------- orders ----------
 
 async function nextOrderNumber(env: Env): Promise<string> {
@@ -433,6 +459,10 @@ export default {
       return json(req, { ok: true, service: "koperasi-mbg-api" });
     }
 
+    if (path.startsWith("/api/")) {
+      if (!(await checkRateLimit(env, req, "general", 300, 60_000))) return rateLimited(req);
+    }
+
     // Public catalog
     if (path === "/api/catalog" && method === "GET") {
       const tab = url.searchParams.get("tab");
@@ -457,6 +487,7 @@ export default {
 
     // Guest order create
     if (path === "/api/orders" && method === "POST") {
+      if (!(await checkRateLimit(env, req, "order_create", 60, 60_000))) return rateLimited(req);
       const body = await readBody(req);
       const items = (Array.isArray(body.items) ? body.items : []) as OrderItemInput[];
       return createOrder(env, req, ctx, {
@@ -495,6 +526,7 @@ export default {
 
     // Walk-in order (barista or manager)
     if (path === "/api/orders/walk-in" && method === "POST") {
+      if (!(await checkRateLimit(env, req, "order_create", 60, 60_000))) return rateLimited(req);
       const auth = await requireStaff(env, req, ["barista", "manager"]);
       if ("res" in auth) return auth.res;
       const body = await readBody(req);
@@ -718,6 +750,7 @@ export default {
 
     // Auth: request OTP
     if (path === "/api/auth/request-otp" && method === "POST") {
+      if (!(await checkRateLimit(env, req, "otp_request", 10, 60_000))) return rateLimited(req);
       const body = await readBody(req);
       const email = String(body.email ?? "").toLowerCase().trim();
       const tujuan = body.tujuan === "action" ? "action" : "login";
@@ -743,6 +776,7 @@ export default {
 
     // Auth: verify OTP (login)
     if (path === "/api/auth/verify-otp" && method === "POST") {
+      if (!(await checkRateLimit(env, req, "otp_verify", 10, 60_000))) return rateLimited(req);
       const body = await readBody(req);
       const email = String(body.email ?? "").toLowerCase().trim();
       const code = String(body.code ?? "");
@@ -778,6 +812,7 @@ export default {
 
     // Auth: verify fresh OTP for sensitive actions
     if (path === "/api/auth/verify-fresh-otp" && method === "POST") {
+      if (!(await checkRateLimit(env, req, "otp_action", 10, 60_000))) return rateLimited(req);
       const auth = await requireStaff(env, req);
       if ("res" in auth) return auth.res;
       const body = await readBody(req);

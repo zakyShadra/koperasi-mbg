@@ -36,3 +36,11 @@ UPDATE pesanan_item SET diubah_pada = COALESCE(
 UPDATE transaksi SET diubah_pada = dibuat_pada WHERE diubah_pada IS NULL;
 UPDATE staf SET diubah_pada = datetime('now', '+7 hours') WHERE diubah_pada IS NULL;
 UPDATE laporan SET diubah_pada = dibuat_pada WHERE diubah_pada IS NULL;
+
+CREATE TABLE IF NOT EXISTS rate_limit (
+  ip TEXT NOT NULL,
+  route TEXT NOT NULL,
+  window_start INTEGER NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (ip, route, window_start)
+);
