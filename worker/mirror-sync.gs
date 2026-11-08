@@ -47,6 +47,7 @@ function doPost(e) {
     if (data.action === 'dump') return dump_(data.tab);
     var op = data.op || 'append';
     if (op === 'upsert') return upsert_(data);
+    if (op === 'delete') return delete_(data);
     return append_(data);
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -66,6 +67,20 @@ function dump_(tab) {
     return r.some(function (c) { return c !== '' && c !== null; });
   });
   return json_({ ok: true, tab: tab, headers: headers, rows: rows });
+}
+
+function delete_(data) {
+  var tab = data.tab;
+  if (!KEY_COLS[tab]) return json_({ ok: false, error: 'tab tidak dikenal' });
+  var sheet = ss_().getSheetByName(tab);
+  if (!sheet) return json_({ ok: false, error: 'tab tidak ada' });
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(String);
+  var keyCols = data.keyCols || KEY_COLS[tab];
+  var key = data.key || '';
+  var rowNum = findRow_(sheet, headers, keyCols, key, null);
+  if (rowNum <= 0) return json_({ ok: true, tab: tab, deleted: 0 });
+  sheet.deleteRow(rowNum);
+  return json_({ ok: true, tab: tab, deleted: 1 });
 }
 
 function append_(data) {

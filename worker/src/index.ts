@@ -6,6 +6,7 @@ import { buildQrisPayload } from "./qris";
 import { handleTelegramUpdate } from "./telegram";
 import {
   applySheetRow,
+  deleteFromSheet,
   mirrorPesanan,
   mirrorPesananItems,
   mirrorProduk,
@@ -255,6 +256,22 @@ async function checkRateLimit(env: Env, req: Request, route: string, limit: numb
   } catch {
     return true;
   }
+}
+
+async function recomputeOrderPaid(env: Env, ctx: ExecutionContext, orderId: number): Promise<void> {
+  const now = wibParts(Date.now()).datetime;
+  const paidRow = await env.DB.prepare(
+    "SELECT COALESCE(SUM(jumlah), 0) AS paid FROM transaksi WHERE pesanan_id = ? AND jenis = 'pembayaran'"
+  ).bind(orderId).first<{ paid: number }>();
+  const order = await env.DB.prepare("SELECT total, status_bayar FROM pesanan WHERE id = ?").bind(orderId).first<{ total: number; status_bayar: string }>();
+  if (!order) return;
+  const lunas = (paidRow?.paid ?? 0) >= order.total;
+  const target = lunas ? "lunas" : "belum";
+  if (target === order.status_bayar) return;
+  await env.DB.prepare("UPDATE pesanan SET status_bayar = ?, dibayar_pada = ?, diubah_pada = ? WHERE id = ?")
+    .bind(target, lunas ? now : null, now, orderId)
+    .run();
+  await mirrorPesanan(env, ctx, orderId);
 }
 
 // ---------- orders ----------
@@ -938,6 +955,100 @@ export default {
       }
       await mirrorTransaksi(env, ctx, trxId);
       return json(req, { ok: true, transaction_id: trxId, kode }, 201);
+    }
+
+    // Finance transaction edit (manager, finance)
+    const financePutMatch = path.match(/^\/api\/finance\/transactions\/(\d+)$/);
+    if (financePutMatch && method === "PUT") {
+      const auth = await requireStaff(env, req, ["finance", "manager"]);
+      if ("res" in auth) return auth.res;
+      const trxId = Number(financePutMatch[1]);
+      const body = await readBody(req);
+      const existing = await env.DB.prepare("SELECT * FROM transaksi WHERE id = ?").bind(trxId).first<Record<string, unknown>>();
+      if (!existing) return fail(req, "transaksi_tidak_ditemukan", 404);
+      const updates: string[] = [];
+      const binds: unknown[] = [];
+      if (body.jenis !== undefined) {
+        const jenis = String(body.jenis);
+        if (!["simpanan", "pembayaran", "penarikan"].includes(jenis)) return fail(req, "jenis_tidak_dikenal");
+        updates.push("jenis = ?");
+        binds.push(jenis);
+      }
+      if (body.jumlah !== undefined) {
+        const jumlah = Number(body.jumlah);
+        if (!Number.isFinite(jumlah) || jumlah <= 0) return fail(req, "jumlah_harus_lebih_dari_0");
+        updates.push("jumlah = ?");
+        binds.push(jumlah);
+      }
+      if (body.metode !== undefined) {
+        const metode = String(body.metode);
+        if (!PAY_METHODS.includes(metode)) return fail(req, "metode_bayar_tidak_dikenal");
+        updates.push("metode = ?");
+        binds.push(metode);
+      }
+      if (body.kategori !== undefined) {
+        updates.push("kategori = ?");
+        binds.push(body.kategori ? String(body.kategori) : null);
+      }
+      if (body.keterangan !== undefined) {
+        updates.push("keterangan = ?");
+        binds.push(body.keterangan ? String(body.keterangan) : null);
+      }
+      let pesananId = existing.pesanan_id as number | null;
+      const oldPesananId = pesananId;
+      const oldJenis = String(existing.jenis);
+      if (body.nomor_pesanan !== undefined) {
+        const nomor = String(body.nomor_pesanan ?? "").trim();
+        if (!nomor) {
+          pesananId = null;
+        } else {
+          const p = await env.DB.prepare("SELECT id FROM pesanan WHERE nomor_pesanan = ?").bind(nomor).first<{ id: number }>();
+          if (!p) return fail(req, "pesanan_tidak_ditemukan", 404);
+          pesananId = p.id;
+        }
+        updates.push("pesanan_id = ?");
+        binds.push(pesananId);
+      }
+      if (!updates.length) return fail(req, "tidak_ada_perubahan");
+      const now = wibParts(Date.now()).datetime;
+      updates.push("diubah_pada = ?");
+      binds.push(now);
+      await env.DB.prepare(`UPDATE transaksi SET ${updates.join(", ")} WHERE id = ?`).bind(...binds, trxId).run();
+      const after = await env.DB.prepare("SELECT * FROM transaksi WHERE id = ?").bind(trxId).first<Record<string, unknown>>();
+      const jenisAfter = String(after?.jenis ?? "");
+      const pesananAfter = after?.pesanan_id as number | null;
+      if (pesananAfter && jenisAfter === "pembayaran") await recomputeOrderPaid(env, ctx, pesananAfter);
+      if (oldPesananId && oldPesananId !== pesananAfter && oldJenis === "pembayaran") {
+        await recomputeOrderPaid(env, ctx, oldPesananId);
+      }
+      await mirrorTransaksi(env, ctx, trxId);
+      return json(req, { ok: true, transaction_id: trxId, kode: existing.kode });
+    }
+
+    // Finance transaction delete (manager, finance). Deletes from D1 and
+    // removes the matching Sheet row via the GAS mirror. If the GAS delete
+    // op is not deployed yet, the Sheet row stays and reconcile may bring
+    // the transaction back: delete the Sheet row by hand in that case.
+    const financeDelMatch = path.match(/^\/api\/finance\/transactions\/(\d+)$/);
+    if (financeDelMatch && method === "DELETE") {
+      const auth = await requireStaff(env, req, ["finance", "manager"]);
+      if ("res" in auth) return auth.res;
+      const trxId = Number(financeDelMatch[1]);
+      const existing = await env.DB.prepare("SELECT * FROM transaksi WHERE id = ?").bind(trxId).first<Record<string, unknown>>();
+      if (!existing) return fail(req, "transaksi_tidak_ditemukan", 404);
+      const kode = String(existing.kode ?? "");
+      const pesananId = existing.pesanan_id as number | null;
+      const wasPembayaran = String(existing.jenis) === "pembayaran";
+      await env.DB.prepare("DELETE FROM transaksi WHERE id = ?").bind(trxId).run();
+      const sheetDeleted = kode ? await deleteFromSheet(env, "Transaksi", kode) : false;
+      if (pesananId && wasPembayaran) await recomputeOrderPaid(env, ctx, pesananId);
+      return json(req, {
+        ok: true,
+        deleted: true,
+        transaction_id: trxId,
+        sheet_deleted: sheetDeleted,
+        warning: sheetDeleted ? undefined : "baris Sheet belum terhapus, hapus manual supaya rekonsiliasi tidak menghidupkannya lagi",
+      });
     }
 
     // Dashboard stats (manager)

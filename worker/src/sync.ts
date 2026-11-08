@@ -312,6 +312,17 @@ export async function mirrorLaporan(env: SyncEnv, ctx: ExecutionContext, laporan
   await mirrorUpsert(env, ctx, "Laporan", [await laporanSheetRow(env, l)]);
 }
 
+export async function deleteFromSheet(env: SyncEnv, tab: SyncTab, key: string): Promise<boolean> {
+  const res = await gasPost(env, { op: "delete", tab, keyCols: KEY_COLS[tab], key });
+  if (!res || res.ok !== true || typeof res.deleted !== "number") {
+    await logSync(env, "worker_ke_sheet", tab, key, "error",
+      `hapus baris Sheet gagal: ${res ? JSON.stringify(res).slice(0, 200) : "tidak ada respons dari GAS"}`);
+    return false;
+  }
+  await logSync(env, "worker_ke_sheet", tab, key, "upsert", `baris Sheet dihapus (${Number(res.deleted)})`);
+  return Number(res.deleted) > 0;
+}
+
 export async function upsertToSheet(
   env: SyncEnv,
   tab: SyncTab,
