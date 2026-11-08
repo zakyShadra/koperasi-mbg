@@ -11,6 +11,9 @@
       // with the path encoded in the query string, so the SPA can restore it.
       var pathSegmentsToKeep =
         window.location.hostname === 'zakyshadra.github.io' ? 1 : 0;
+      var segments = window.location.pathname.slice(1).split('/');
+      if (pathSegmentsToKeep === 0 && segments[0] === 'koperasi-mbg')
+        segments.shift();
       var l = window.location;
       l.replace(
         l.protocol +
@@ -22,9 +25,7 @@
             .slice(0, 1 + pathSegmentsToKeep)
             .join('/') +
           '/?/' +
-          l.pathname
-            .slice(1)
-            .split('/')
+          segments
             .slice(pathSegmentsToKeep)
             .join('/')
             .replace(/&/g, '~and~') +

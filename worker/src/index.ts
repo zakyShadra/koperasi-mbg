@@ -23,6 +23,7 @@ export interface Env {
 const ALLOWED_ORIGINS = [
   "https://zakyshadra.github.io",
   "https://koperasimbg.ices.my.id",
+  "http://koperasimbg.ices.my.id",
   "http://localhost:5173",
   "http://localhost:3000",
 ];
