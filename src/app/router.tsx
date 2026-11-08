@@ -39,11 +39,12 @@ function titleFor(pathname: string): string {
 function Layout() {
   const location = useLocation();
   const title = titleFor(location.pathname);
+  const isLogin = location.pathname === '/kprmbg20asdf';
 
   return (
-    <>
-      <Sidebar />
-      <TopBar title={title} />
+    <div className={isLogin ? 'app-shell app-shell--bare' : 'app-shell'}>
+      {!isLogin && <Sidebar />}
+      {!isLogin && <TopBar title={title} />}
       <main className="app-content">
         <Routes>
           <Route path="/" element={<Navigate to="/pelanggan" replace />} />
@@ -112,7 +113,7 @@ function Layout() {
           <Route path="*" element={<Navigate to="/pelanggan" replace />} />
         </Routes>
       </main>
-    </>
+    </div>
   );
 }
 

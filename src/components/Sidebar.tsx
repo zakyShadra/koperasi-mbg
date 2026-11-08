@@ -281,7 +281,9 @@ export function Sidebar() {
     <aside
       className={`sidebar${expanded ? ' is-expanded' : ''}`}
       aria-label="Navigasi utama"
-      onMouseEnter={() => setHovering(true)}
+      onMouseEnter={() => {
+        if (window.matchMedia('(hover: hover)').matches) setHovering(true);
+      }}
       onMouseLeave={() => {
         setHovering(false);
         setFlyoutId(null);

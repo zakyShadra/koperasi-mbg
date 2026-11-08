@@ -34,7 +34,7 @@ export function ProductCard({ product, onAdd, delay = 0 }: ProductCardProps) {
       <p className="product-stock">{out ? 'Stok habis' : `Stok: ${product.stock}`}</p>
       <button
         type="button"
-        className="btn-primary btn-sm product-add"
+        className="btn btn-primary btn-sm product-add"
         disabled={out}
         onClick={() => onAdd(product)}
       >

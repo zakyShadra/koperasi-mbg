@@ -8,11 +8,9 @@ export default function App() {
     <>
       <div className="bg-photo" aria-hidden="true" />
       <div className="bg-veil" aria-hidden="true" />
-      <div className="app-shell">
-        <CartProvider>
-          <AppRouter />
-        </CartProvider>
-      </div>
+      <CartProvider>
+        <AppRouter />
+      </CartProvider>
     </>
   );
 }

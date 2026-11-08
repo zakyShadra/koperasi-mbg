@@ -61,7 +61,7 @@ export default function TrackerPage() {
                   Metode bayar: {order.methodLabel}. Status: Diterima, barista
                   segera menyiapkan pesanan kamu.
                 </p>
-                <Link to="/pelanggan" className="btn-primary cart-submit">
+                <Link to="/pelanggan" className="btn btn-primary cart-submit">
                   Buat pesanan baru
                 </Link>
               </>
@@ -90,7 +90,7 @@ export default function TrackerPage() {
                       pesanan terakhir di perangkat ini.
                     </p>
                   )}
-                  <button type="submit" className="btn-primary cart-submit">
+                  <button type="submit" className="btn btn-primary cart-submit">
                     Lacak
                   </button>
                 </form>

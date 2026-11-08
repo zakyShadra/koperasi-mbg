@@ -525,6 +525,14 @@
     border-top: 1px solid var(--hairline);
   }
 
+  .sidebar.is-expanded {
+    width: 100%;
+  }
+
+  .sidebar.is-expanded .sidebar-item__label {
+    max-width: none;
+  }
+
   .sidebar__brand,
   .sidebar__user,
   .sidebar-item__status,
@@ -580,7 +588,7 @@
     justify-content: center;
     align-items: center;
     gap: 2px;
-    flex: 1;
+    flex: 0 0 72px;
     min-width: 0;
     padding: 6px 2px;
     border: none;

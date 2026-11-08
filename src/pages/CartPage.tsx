@@ -30,14 +30,14 @@ export default function CartPage() {
               <>
                 <button
                   type="button"
-                  className="btn-primary cart-submit"
+                  className="btn btn-primary cart-submit"
                   onClick={() => navigate('/pelanggan/checkout')}
                 >
                   Lanjut ke checkout ({count} item)
                 </button>
                 <a
                   href="#"
-                  className="btn-secondary shopeefood-btn"
+                  className="btn btn-secondary shopeefood-btn"
                   onClick={(e) => {
                     e.preventDefault();
                     handleShopeeFood();

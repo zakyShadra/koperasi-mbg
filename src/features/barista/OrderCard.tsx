@@ -114,7 +114,7 @@ export function OrderCard({ order, onAdvance, delay = 0 }: OrderCardProps) {
         <p className="order-draft-warning">Draft, cek item dulu</p>
       )}
       {label && (
-        <button type="button" className="btn-primary btn-sm order-action" onClick={() => onAdvance(order)}>
+        <button type="button" className="btn btn-primary btn-sm order-action" onClick={() => onAdvance(order)}>
           {label}
         </button>
       )}

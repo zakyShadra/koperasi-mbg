@@ -25,6 +25,11 @@
   opacity: 0;
 }
 
+.pelanggan-loader.is-exiting .loader-scene,
+.pelanggan-loader.is-exiting .loader-dots span {
+  animation-play-state: paused;
+}
+
 .loader-scene {
   display: inline-block;
   animation: loader-bob 1.2s ease-in-out infinite;

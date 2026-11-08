@@ -18,7 +18,7 @@ export default function BaristaKatalog() {
         <GlassCard className="catalog-panel">
           <div className="catalog-panel-head">
             <h2>Katalog warkop</h2>
-            <button type="button" className="btn-primary" onClick={addWalkInOrder}>
+            <button type="button" className="btn btn-primary" onClick={addWalkInOrder}>
               Tambah pesanan walk-in
             </button>
           </div>

@@ -168,6 +168,15 @@ button {
   }
 }
 
+.app-shell--bare {
+  padding-left: 0;
+  padding-bottom: 0;
+}
+
+.app-shell--bare .login-wrap {
+  min-height: 100svh;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

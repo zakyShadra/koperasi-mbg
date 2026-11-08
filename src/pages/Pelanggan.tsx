@@ -26,24 +26,30 @@ export default function Pelanggan() {
   const [loading, setLoading] = useState(false);
   const [loaderText, setLoaderText] = useState('Memuat katalog...');
   const [loadCycle, setLoadCycle] = useState(0);
+  const [gridReady, setGridReady] = useState(false);
   const timers = useRef<number[]>([]);
+
+  const handleLoaderDone = useCallback(() => {
+    setLoadCycle((c) => c + 1);
+    setGridReady(true);
+  }, []);
 
   const startLoad = useCallback((text: string) => {
     setLoaderText(text);
+    setGridReady(false);
     setLoading(true);
     const id = window.setTimeout(() => {
       setLoading(false);
-      setLoadCycle((c) => c + 1);
     }, randomLoadMs());
     timers.current.push(id);
   }, []);
 
   useEffect(() => {
     setLoaderText('Memuat katalog...');
+    setGridReady(false);
     setLoading(true);
     const id = window.setTimeout(() => {
       setLoading(false);
-      setLoadCycle((c) => c + 1);
     }, randomLoadMs());
     return () => window.clearTimeout(id);
   }, []);
@@ -73,7 +79,7 @@ export default function Pelanggan() {
   return (
     <View>
       <div className="pelanggan-page view-enter">
-        <PelangganLoader active={loading} text={loaderText} />
+        <PelangganLoader active={loading} text={loaderText} onDone={handleLoaderDone} />
 
         <div className="pelanggan-header">
           <label className="pelanggan-search">
@@ -88,7 +94,7 @@ export default function Pelanggan() {
           <div className="pelanggan-header-actions">
             <button
               type="button"
-              className="btn-secondary cart-jump"
+              className="btn btn-secondary cart-jump"
               onClick={() => navigate('/pelanggan/keranjang')}
             >
               Keranjang
@@ -96,7 +102,7 @@ export default function Pelanggan() {
             </button>
             <button
               type="button"
-              className="btn-secondary"
+              className="btn btn-secondary"
               onClick={() => startLoad('Memuat katalog...')}
             >
               Coba Loading
@@ -114,7 +120,7 @@ export default function Pelanggan() {
         />
 
         <div className="catalog-col">
-          {loading ? (
+          {!gridReady ? (
             <div className="product-grid" aria-busy="true" aria-label="Memuat katalog">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="pelanggan-skeleton" aria-hidden="true">

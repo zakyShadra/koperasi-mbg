@@ -50,7 +50,7 @@ export default function CheckoutPage() {
                 <p className="cart-empty">
                   Keranjang masih kosong. Pilih barang dari katalog dulu.
                 </p>
-                <Link to="/pelanggan" className="btn-primary cart-submit">
+                <Link to="/pelanggan" className="btn btn-primary cart-submit">
                   Ke katalog
                 </Link>
               </>
@@ -97,7 +97,7 @@ export default function CheckoutPage() {
                     ))}
                   </fieldset>
                   {error && <p className="cart-error">{error}</p>}
-                  <button type="submit" className="btn-primary cart-submit" disabled={submitting}>
+                  <button type="submit" className="btn btn-primary cart-submit" disabled={submitting}>
                     {submitting ? 'Mengirim...' : 'Pesan sekarang'}
                   </button>
                 </form>
