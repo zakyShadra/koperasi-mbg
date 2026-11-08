@@ -15,6 +15,12 @@ database_id = "1080218b-58f3-480c-ae88-4faf60a532ca"
 pattern = "koperasimbg.ices.my.id/api/*"
 zone_name = "ices.my.id"
 
+# Reconciliation runs every 15 minutes: compares D1 and the Sheet by ID and
+# diubah_pada and fixes drift in both directions. Best effort; a failed run
+# is retried on the next tick. Free tier.
+[triggers]
+crons = ["*/15 * * * *"]
+
 [vars]
 # DEV_MODE=true keeps the dev OTP code in the request-otp response.
 # Remove (set to "false") at launch. See README.md.

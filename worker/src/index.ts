@@ -4,6 +4,20 @@
 
 import { buildQrisPayload } from "./qris";
 import { handleTelegramUpdate } from "./telegram";
+import {
+  applySheetRow,
+  mirrorPesanan,
+  mirrorPesananItems,
+  mirrorProduk,
+  mirrorStaf,
+  mirrorTransaksi,
+  mirrorUpsert,
+  reconcileAll,
+  sheetRowById,
+  SYNC_TABS,
+  upsertToSheet,
+} from "./sync";
+import type { SyncTab } from "./sync";
 
 export interface Env {
   DB: D1Database;
@@ -11,6 +25,7 @@ export interface Env {
   FORWARDER_SECRET?: string;
   GAS_MIRROR_URL?: string;
   GAS_MIRROR_SECRET?: string;
+  SHEET_SYNC_SECRET?: string;
   QRIS_MERCHANT_NAME?: string;
   QRIS_MERCHANT_CITY?: string;
   QRIS_NMID?: string;
@@ -225,9 +240,9 @@ async function nextOrderNumber(env: Env): Promise<string> {
 async function expireStaleDrafts(env: Env): Promise<void> {
   const cutoff = wibParts(Date.now() - DRAFT_CONFIRM_MS).datetime;
   await env.DB.prepare(
-    "UPDATE pesanan SET status = 'dibatalkan' WHERE is_draft = 1 AND status = 'baru' AND dibuat_pada < ?"
+    "UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE is_draft = 1 AND status = 'baru' AND dibuat_pada < ?"
   )
-    .bind(cutoff)
+    .bind(wibParts(Date.now()).datetime, cutoff)
     .run();
 }
 
@@ -240,52 +255,9 @@ function stripWaForFinance(order: Record<string, unknown>, role: string): Record
   return order;
 }
 
-interface MirrorItem {
-  kode_produk: string;
-  nama: string;
-  qty: number;
-  harga: number;
-}
-
-async function mirrorToSheet(env: Env, tab: string, rows: unknown[][]): Promise<void> {
-  if (!env.GAS_MIRROR_URL || !env.GAS_MIRROR_SECRET) return;
-  const p = fetch(env.GAS_MIRROR_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ secret: env.GAS_MIRROR_SECRET, tab, rows }),
-  }).catch(() => undefined);
-  return p.then(() => undefined);
-}
-
-async function mirrorOrder(env: Env, ctx: ExecutionContext, order: Record<string, unknown>, items: MirrorItem[]): Promise<void> {
-  if (!env.GAS_MIRROR_URL || !env.GAS_MIRROR_SECRET) return;
-  try {
-    const orderRow = [
-      order.nomor_pesanan,
-      order.dibuat_pada,
-      order.nama_pelanggan,
-      order.no_wa_pelanggan,
-      order.status,
-      order.total,
-      order.sumber_pesanan,
-      order.metode_bayar,
-      order.catatan ?? "",
-      "sistem",
-    ];
-    const itemRows = items.map((it) => [
-      order.nomor_pesanan,
-      it.kode_produk,
-      it.nama,
-      it.qty,
-      it.harga,
-      it.harga * it.qty,
-      "sistem",
-    ]);
-    ctx.waitUntil(mirrorToSheet(env, "Pesanan", [orderRow]));
-    if (itemRows.length) ctx.waitUntil(mirrorToSheet(env, "Pesanan Item", itemRows));
-  } catch {
-    // Mirror is best effort and must never break the order response.
-  }
+async function mirrorOrder(env: Env, ctx: ExecutionContext, orderId: number): Promise<void> {
+  await mirrorPesanan(env, ctx, orderId);
+  await mirrorPesananItems(env, ctx, orderId);
 }
 
 async function loadOrderItems(env: Env, orderIds: number[]): Promise<Map<number, unknown[]>> {
@@ -352,14 +324,15 @@ async function createOrder(
   const now = wibParts(Date.now()).datetime;
   const stmts: D1PreparedStatement[] = [
     env.DB.prepare(
-      `INSERT INTO pesanan (nomor_pesanan, anggota_id, nama_pelanggan, no_wa_pelanggan, status, total, catatan, dibuat_pada, sumber_pesanan, is_draft, metode_bayar, status_bayar, raw_text)
-       VALUES (?, NULL, ?, ?, 'baru', ?, ?, ?, ?, ?, ?, 'belum', ?)`
+      `INSERT INTO pesanan (nomor_pesanan, anggota_id, nama_pelanggan, no_wa_pelanggan, status, total, catatan, dibuat_pada, diubah_pada, sumber_pesanan, is_draft, metode_bayar, status_bayar, raw_text)
+       VALUES (?, NULL, ?, ?, 'baru', ?, ?, ?, ?, ?, ?, ?, 'belum', ?)`
     ).bind(
       nomor,
       nama,
       wa,
       total,
       input.catatan ?? null,
+      now,
       now,
       input.sumber ?? "web",
       input.isDraft ? 1 : 0,
@@ -375,12 +348,12 @@ async function createOrder(
     const p = products[i];
     itemStmts.push(
       env.DB.prepare(
-        "INSERT INTO pesanan_item (pesanan_id, produk_id, qty, harga_saat_beli, subtotal) VALUES (?, ?, ?, ?, ?)"
-      ).bind(orderId, p.id, Number(item.qty), p.harga, p.harga * Number(item.qty))
+        "INSERT INTO pesanan_item (pesanan_id, produk_id, qty, harga_saat_beli, subtotal, diubah_pada) VALUES (?, ?, ?, ?, ?, ?)"
+      ).bind(orderId, p.id, Number(item.qty), p.harga, p.harga * Number(item.qty), now)
     );
     itemStmts.push(
-      env.DB.prepare("UPDATE produk SET stok = stok - ? WHERE id = ? AND stok >= ?")
-        .bind(Number(item.qty), p.id, Number(item.qty))
+      env.DB.prepare("UPDATE produk SET stok = stok - ?, diubah_pada = ? WHERE id = ? AND stok >= ?")
+        .bind(Number(item.qty), now, p.id, Number(item.qty))
     );
   });
   await env.DB.batch(itemStmts);
@@ -398,12 +371,10 @@ async function createOrder(
     is_draft: input.isDraft ? 1 : 0,
     dibuat_pada: now,
   };
-  await mirrorOrder(
-    env,
-    ctx,
-    order,
-    products.map((p, i) => ({ kode_produk: p.kode_produk, nama: p.nama, qty: Number(input.items[i].qty), harga: p.harga }))
-  );
+  await mirrorOrder(env, ctx, orderId);
+  for (const p of products) {
+    await mirrorProduk(env, ctx, p.id);
+  }
   const res: Record<string, unknown> = { ok: true, order };
   if (input.metode === "qris") {
     res.qris_payload = buildQrisPayload(qrisConfig(env), total, nomor);
@@ -550,9 +521,10 @@ export default {
         .bind(nomor)
         .first<{ id: number; status: string }>();
       if (!order) return fail(req, "pesanan_tidak_ditemukan", 404);
-      await env.DB.prepare("UPDATE pesanan SET status_bayar = 'lunas', dibayar_pada = ? WHERE id = ?")
-        .bind(wibParts(Date.now()).datetime, order.id)
+      await env.DB.prepare("UPDATE pesanan SET status_bayar = 'lunas', dibayar_pada = ?, diubah_pada = ? WHERE id = ?")
+        .bind(wibParts(Date.now()).datetime, wibParts(Date.now()).datetime, order.id)
         .run();
+      await mirrorPesanan(env, ctx, order.id);
       return json(req, { ok: true, order_number: nomor, status_bayar: "lunas" });
     }
 
@@ -581,6 +553,7 @@ export default {
       const orderId = Number(statusMatch[1]);
       const body = await readBody(req);
       const target = String(body.status ?? "");
+      const now = wibParts(Date.now()).datetime;
       if (!ORDER_STATUSES.includes(target as (typeof ORDER_STATUSES)[number])) {
         return fail(req, "status_tidak_dikenal");
       }
@@ -599,17 +572,20 @@ export default {
         return fail(req, "pesanan_sudah_final_tidak_bisa_diubah");
       }
       if (target === "dibatalkan") {
-        await env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan' WHERE id = ?").bind(orderId).run();
+        await env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, orderId).run();
+        await mirrorPesanan(env, ctx, orderId);
         return json(req, { ok: true, order_id: orderId, status: "dibatalkan" });
       }
       // Draft confirm: must be within 3 minutes, goes baru -> disiapkan.
       if (order.is_draft === 1) {
         if (target !== "disiapkan") return fail(req, "draft_harus_dikonfirmasi_dulu");
         if (Date.now() - wibToEpoch(order.dibuat_pada) > DRAFT_CONFIRM_MS) {
-          await env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan' WHERE id = ?").bind(orderId).run();
+          await env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, orderId).run();
+          await mirrorPesanan(env, ctx, orderId);
           return fail(req, "draft_lewat_batas_3_menit_otomatis_batal", 410);
         }
-        await env.DB.prepare("UPDATE pesanan SET is_draft = 0, status = 'disiapkan' WHERE id = ?").bind(orderId).run();
+        await env.DB.prepare("UPDATE pesanan SET is_draft = 0, status = 'disiapkan', diubah_pada = ? WHERE id = ?").bind(now, orderId).run();
+        await mirrorPesanan(env, ctx, orderId);
         return json(req, { ok: true, order_id: orderId, status: "disiapkan", draft: false });
       }
       if (NEXT_STATUS[order.status] !== target) {
@@ -628,12 +604,13 @@ export default {
           return fail(req, "belum_lunas_pesanan_tidak_bisa_ditandai_selesai");
         }
         if (tunaiDiterima) {
-          await env.DB.prepare("UPDATE pesanan SET status_bayar = 'lunas', dibayar_pada = ? WHERE id = ?")
-            .bind(wibParts(Date.now()).datetime, orderId)
+          await env.DB.prepare("UPDATE pesanan SET status_bayar = 'lunas', dibayar_pada = ?, diubah_pada = ? WHERE id = ?")
+            .bind(now, now, orderId)
             .run();
         }
       }
-      await env.DB.prepare("UPDATE pesanan SET status = ? WHERE id = ?").bind(target, orderId).run();
+      await env.DB.prepare("UPDATE pesanan SET status = ?, diubah_pada = ? WHERE id = ?").bind(target, now, orderId).run();
+      await mirrorPesanan(env, ctx, orderId);
       return json(req, { ok: true, order_id: orderId, status: target });
     }
 
@@ -647,7 +624,8 @@ export default {
       const product = await env.DB.prepare("SELECT id, stok FROM produk WHERE id = ?").bind(Number(availMatch[1])).first<{ id: number; stok: number }>();
       if (!product) return fail(req, "produk_tidak_ditemukan", 404);
       if (tersedia === 1 && product.stok === 0) return fail(req, "stok_kosong_produk_tidak_bisa_ditandai_tersedia");
-      await env.DB.prepare("UPDATE produk SET tersedia = ? WHERE id = ?").bind(tersedia, product.id).run();
+      await env.DB.prepare("UPDATE produk SET tersedia = ?, diubah_pada = ? WHERE id = ?").bind(tersedia, wibParts(Date.now()).datetime, product.id).run();
+      await mirrorProduk(env, ctx, product.id);
       return json(req, { ok: true, product_id: product.id, tersedia });
     }
 
@@ -666,7 +644,8 @@ export default {
       if (!Number.isFinite(harga) || harga <= 0) return fail(req, "harga_harus_lebih_dari_0");
       const product = await env.DB.prepare("SELECT id FROM produk WHERE id = ?").bind(Number(priceMatch[1])).first();
       if (!product) return fail(req, "produk_tidak_ditemukan", 404);
-      await env.DB.prepare("UPDATE produk SET harga = ? WHERE id = ?").bind(harga, Number(priceMatch[1])).run();
+      await env.DB.prepare("UPDATE produk SET harga = ?, diubah_pada = ? WHERE id = ?").bind(harga, wibParts(Date.now()).datetime, Number(priceMatch[1])).run();
+      await mirrorProduk(env, ctx, Number(priceMatch[1]));
       return json(req, { ok: true, product_id: Number(priceMatch[1]), harga });
     }
 
@@ -842,8 +821,8 @@ export default {
         .first<{ n: number }>();
       const kode = `TRX-${today}-${pad((countRow?.n ?? 0) + 1, 4)}`;
       const ins = await env.DB.prepare(
-        `INSERT INTO transaksi (kode, anggota_id, pesanan_id, staf_id, jenis, jumlah, metode, kategori, keterangan, dibuat_pada)
-         VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO transaksi (kode, anggota_id, pesanan_id, staf_id, jenis, jumlah, metode, kategori, keterangan, dibuat_pada, diubah_pada)
+         VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(
           kode,
@@ -854,6 +833,7 @@ export default {
           metode,
           body.kategori ? String(body.kategori) : null,
           body.keterangan ? String(body.keterangan) : null,
+          wibParts(Date.now()).datetime,
           wibParts(Date.now()).datetime
         )
         .run();
@@ -866,11 +846,13 @@ export default {
           .first<{ paid: number }>();
         const order = await env.DB.prepare("SELECT total FROM pesanan WHERE id = ?").bind(pesananId).first<{ total: number }>();
         if (order && (paidRow?.paid ?? 0) >= order.total) {
-          await env.DB.prepare("UPDATE pesanan SET status_bayar = 'lunas', dibayar_pada = ? WHERE id = ?")
-            .bind(wibParts(Date.now()).datetime, pesananId)
+          await env.DB.prepare("UPDATE pesanan SET status_bayar = 'lunas', dibayar_pada = ?, diubah_pada = ? WHERE id = ?")
+            .bind(wibParts(Date.now()).datetime, wibParts(Date.now()).datetime, pesananId)
             .run();
+          await mirrorPesanan(env, ctx, pesananId);
         }
       }
+      await mirrorTransaksi(env, ctx, trxId);
       return json(req, { ok: true, transaction_id: trxId, kode }, 201);
     }
 
@@ -985,10 +967,10 @@ export default {
       const nomor = await nextOrderNumber(env);
       const now = wibParts(Date.now()).datetime;
       const ins = await env.DB.prepare(
-        `INSERT INTO pesanan (nomor_pesanan, anggota_id, nama_pelanggan, no_wa_pelanggan, status, total, catatan, dibuat_pada, sumber_pesanan, is_draft, metode_bayar, status_bayar, raw_text)
-         VALUES (?, NULL, ?, '', 'baru', ?, ?, ?, 'shopeefood', 1, 'qris', 'belum', ?)`
+        `INSERT INTO pesanan (nomor_pesanan, anggota_id, nama_pelanggan, no_wa_pelanggan, status, total, catatan, dibuat_pada, diubah_pada, sumber_pesanan, is_draft, metode_bayar, status_bayar, raw_text)
+         VALUES (?, NULL, ?, '', 'baru', ?, ?, ?, ?, 'shopeefood', 1, 'qris', 'belum', ?)`
       )
-        .bind(nomor, customer, Number(body.total ?? 0), catatanParts.join(" "), now, text || null)
+        .bind(nomor, customer, Number(body.total ?? 0), catatanParts.join(" "), now, now, text || null)
         .run();
       const draftOrder = {
         id: ins.meta.last_row_id,
@@ -1003,7 +985,7 @@ export default {
         metode_bayar: "qris",
         dibuat_pada: now,
       };
-      await mirrorOrder(env, ctx, draftOrder, []);
+      await mirrorOrder(env, ctx, draftOrder.id as number);
       return json(
         req,
         {
@@ -1023,12 +1005,14 @@ export default {
       if (!result.ok) {
         return json(req, { ok: false, error: "telegram_not_configured", message: "TELEGRAM_BOT_TOKEN belum diset. Set secret dulu, lalu set webhook Telegram ke URL ini." }, 503);
       }
+      if (result.staffId) await mirrorStaf(env, ctx, result.staffId);
       return json(req, { ok: true });
     }
 
     // Sheet mirror (staff only, never blocks orders). The Apps Script
     // doPost cannot read request headers, so the secret travels in the
-    // JSON body, not in an X-Mirror-Secret header.
+    // JSON body, not in an X-Mirror-Secret header. Rows are objects keyed
+    // by header name and are upserted by their ID column.
     if (path === "/api/mirror" && method === "POST") {
       const auth = await requireStaff(env, req, ["finance", "manager"]);
       if ("res" in auth) return auth.res;
@@ -1036,10 +1020,15 @@ export default {
         return json(req, { ok: false, error: "gas_mirror_not_configured", message: "GAS_MIRROR_URL atau GAS_MIRROR_SECRET belum diset." });
       }
       const body = await readBody(req);
-      const tab = String(body.tab ?? "");
+      const tab = String(body.tab ?? "") as SyncTab;
       const rows = Array.isArray(body.rows) ? body.rows : [];
-      if (!tab || !rows.length) {
+      if (!tab || !SYNC_TABS.includes(tab) || !rows.length) {
         return json(req, { ok: false, error: "mirror_butuh_tab_dan_rows" });
+      }
+      if (rows.length && typeof rows[0] === "object" && rows[0] !== null && !Array.isArray(rows[0])) {
+        const res = await upsertToSheet(env, tab, rows as Record<string, unknown>[]);
+        if (!res) return json(req, { ok: false, error: "mirror_gagal" });
+        return json(req, { ok: true, tab, updated: res.updated, inserted: res.inserted, skipped: res.skipped });
       }
       try {
         const res = await fetch(env.GAS_MIRROR_URL, {
@@ -1054,6 +1043,72 @@ export default {
       }
     }
 
+    // Sheet -> Worker sync. Called by the GAS onEdit trigger. Auth is the
+    // shared SHEET_SYNC_SECRET, sent as X-Sheet-Sync-Secret (GAS can send
+    // headers, unlike doPost which cannot read them).
+    if (path === "/api/sheet-sync" && method === "POST") {
+      const headerSecret = req.headers.get("X-Sheet-Sync-Secret") ?? "";
+      const body = await readBody(req);
+      const bodySecret = String(body.secret ?? "");
+      if (!env.SHEET_SYNC_SECRET || (headerSecret !== env.SHEET_SYNC_SECRET && bodySecret !== env.SHEET_SYNC_SECRET)) {
+        return fail(req, "sheet_sync_secret_tidak_valid", 401);
+      }
+      const tab = String(body.tab ?? "") as SyncTab;
+      if (!SYNC_TABS.includes(tab)) return fail(req, "tab_tidak_dikenal");
+      const rows = Array.isArray(body.rows) ? (body.rows as Record<string, unknown>[]) : [];
+      const rowNums = Array.isArray(body.rowNums) ? (body.rowNums as (number | null)[]) : [];
+      let applied = 0;
+      let skipped = 0;
+      const errors: { key: string; detail: string }[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const clean: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rows[i])) {
+          if (!k.startsWith("_")) clean[k] = v;
+        }
+        const res = await applySheetRow(env, tab, clean, typeof rowNums[i] === "number" ? rowNums[i] : null);
+        if (res.result === "applied") {
+          applied++;
+          if (res.mirror) {
+            const sheetRow = await sheetRowById(env, res.mirror.tab, res.mirror.id);
+            if (sheetRow) await mirrorUpsert(env, ctx, res.mirror.tab, [sheetRow], [res.mirror.rowNum]);
+          }
+        } else if (res.result === "error") {
+          skipped++;
+          errors.push({ key: res.key, detail: res.detail });
+        } else {
+          skipped++;
+        }
+      }
+      return json(req, { ok: true, tab, applied, skipped, errors });
+    }
+
+    // Manual + scheduled reconciliation. Compares D1 and the Sheet by ID and
+    // diubah_pada, fixes drift in both directions, logs a summary per tab.
+    if (path === "/api/sync/reconcile" && method === "POST") {
+      const auth = await requireStaff(env, req, ["manager"]);
+      if ("res" in auth) return auth.res;
+      const res = await reconcileAll(env, ctx);
+      if (!res.ok) return json(req, { ok: false, error: res.error }, 503);
+      return json(req, { ok: true, summary: res.summary });
+    }
+
+    // Sync log (staff only): recent sync events and conflicts.
+    if (path === "/api/sync/log" && method === "GET") {
+      const auth = await requireStaff(env, req, ["manager", "finance"]);
+      if ("res" in auth) return auth.res;
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit") ?? 100) || 100, 1), 200);
+      const rows = await env.DB.prepare("SELECT * FROM sync_log ORDER BY id DESC LIMIT ?").bind(limit).all();
+      return json(req, { ok: true, log: rows.results ?? [] });
+    }
+
     return fail(req, "route_tidak_dikenal", 404);
+  },
+
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    try {
+      await reconcileAll(env, ctx);
+    } catch {
+      // Reconcile is best effort; a failed run is retried on the next tick.
+    }
   },
 };

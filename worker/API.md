@@ -139,13 +139,36 @@ Roles: finance, manager. Query: `from`, `to` (default last 30 days).
 Response: `{ ok, from, to, masuk, keluar, saldo, per_kategori: [{ kategori, jenis, jumlah }] }`.
 
 ### POST /api/mirror
-Roles: finance, manager. Body: `{ "tab": "Pesanan", "rows": [[...]] }`.
-Forwards to the GAS web app (`GAS_MIRROR_URL`). The Worker adds the secret
-to the JSON body (`{ "secret": <GAS_MIRROR_SECRET>, "tab", "rows" }`) because
+Roles: finance, manager. Body: `{ "tab": "Pesanan", "rows": [{...}] }`.
+Upserts the rows into the Sheet by their business key (the same upsert the
+Worker does automatically on every write). The Worker adds the secret to
+the JSON body (`{ "secret": <GAS_MIRROR_SECRET>, "tab", "rows" }`) because
 Apps Script `doPost` cannot read request headers, so an `X-Mirror-Secret`
-header would never reach the script. If the URL or the secret is unset:
-`{ ok: false, error: "gas_mirror_not_configured" }`. Mirror failures never
-block orders; order mirroring happens server-side and is best effort.
+header would never reach the script. Rows are objects keyed by header name
+(a legacy array of arrays is still accepted and appended as before). If the
+URL or the secret is unset: `{ ok: false, error: "gas_mirror_not_configured" }`.
+Mirror failures never block orders; order mirroring happens server-side and
+is best effort.
+
+### POST /api/sheet-sync
+No session auth. Header: `X-Sheet-Sync-Secret: <SHEET_SYNC_SECRET>` (a
+secret in the JSON body is also accepted). Called by the Apps Script onEdit
+trigger. Body: `{ "tab": "Produk", "rows": [{...}], "rowNums": [5] }`.
+Each row is upserted into D1 by the tab's business key, last write wins by
+`diubah_pada`, and conflicts are logged to `sync_log`. Rows with
+`sumber: "contoh"` are skipped. Response: `{ ok, tab, applied, skipped, errors }`.
+Error 401: `sheet_sync_secret_tidak_valid`.
+
+### POST /api/sync/reconcile
+Role: manager. Compares D1 and the Sheet by ID and `diubah_pada` and fixes
+drift in both directions (also runs every 15 minutes via the cron trigger).
+Response: `{ ok, summary: { <tab>: { d1_ke_sheet, sheet_ke_d1, sama, contoh_dilewat, error } } }`.
+Error 503: `gas_mirror_not_configured` when the Sheet cannot be reached.
+
+### GET /api/sync/log
+Roles: manager, finance. Query: `limit` (default 100, max 200). Recent
+sync events and conflicts, newest first. Response: `{ ok, log: [{ id, arah, tab, kunci, aksi, detail, dibuat_pada }] }`.
+`aksi` is one of `upsert`, `lewat_konflik`, `error`, `lewat_contoh`.
 
 ## Webhooks (no session auth, secret/header auth)
 

@@ -1,1 +1,17 @@
-{"devDependencies":{"@cloudflare/workers-types":"^4.20251107.0","typescript":"^5.9.3"},"name":"koperasi-mbg-api","private":true,"scripts":{"db:apply":"wrangler d1 execute koperasi-mbg --remote --file=./schema.sql","db:seed":"wrangler d1 execute koperasi-mbg --remote --file=./seed.sql","deploy":"wrangler deploy","dev":"wrangler dev","typecheck":"tsc --noEmit"},"version":"0.1.0"}
+{
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251107.0",
+    "typescript": "^5.9.3"
+  },
+  "name": "koperasi-mbg-api",
+  "private": true,
+  "scripts": {
+    "db:apply": "wrangler d1 execute koperasi-mbg --remote --file=./schema.sql",
+    "db:seed": "wrangler d1 execute koperasi-mbg --remote --file=./seed.sql",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "db:apply-sync": "wrangler d1 execute koperasi-mbg --remote --file=./schema-sync.sql"
+  },
+  "version": "0.1.0"
+}

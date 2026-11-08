@@ -45,7 +45,7 @@ function nextStaffCode(db: D1Database): Promise<string> {
     .then((r) => "STF-" + String((r?.n ?? 0) + 1).padStart(3, "0"));
 }
 
-async function handleCommand(env: TelegramEnv, chatId: number, text: string): Promise<void> {
+async function handleCommand(env: TelegramEnv, chatId: number, text: string): Promise<number> {
   const parts = text.trim().split(/\s+/);
   const cmd = parts[0].replace(/@.*$/, "");
   const db = env.DB;
@@ -56,7 +56,7 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
       chatId,
       "Perintah admin Koperasi MBG:\n/addstaff <email> <role> [nama] - tambah staf (butuh persetujuan)\n/revoke <email> - nonaktifkan staf dan cabut semua sesinya\n/liststaff - daftar staf\n/setopen - warkop buka\n/setclosed - warkop tutup"
     );
-    return;
+    return 0;
   }
 
   if (cmd === "/liststaff") {
@@ -67,7 +67,7 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
       (s) => `${s.email} - ${s.peran} - ${s.is_aktif ? "aktif" : "nonaktif"}`
     );
     await reply(env, chatId, lines.length ? lines.join("\n") : "Belum ada staf.");
-    return;
+    return 0;
   }
 
   if (cmd === "/addstaff") {
@@ -76,7 +76,7 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
     const nama = parts.slice(3).join(" ") || email.split("@")[0];
     if (!email.includes("@") || !ROLES.includes(role as (typeof ROLES)[number])) {
       await reply(env, chatId, "Pakai: /addstaff <email> <manager|finance|barista> [nama]");
-      return;
+      return 0;
     }
     const existing = await db
       .prepare("SELECT id, is_aktif FROM staf WHERE email = ?")
@@ -84,16 +84,18 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
       .first<{ id: number; is_aktif: number }>();
     if (existing && existing.is_aktif === 1) {
       await reply(env, chatId, `${email} sudah terdaftar dan aktif.`);
-      return;
+      return 0;
     }
     let staffId = existing?.id;
+    let created = false;
     if (!staffId) {
       const kode = await nextStaffCode(db);
       const ins = await db
-        .prepare("INSERT INTO staf (kode, nama, email, peran, is_aktif) VALUES (?, ?, ?, ?, 0)")
+        .prepare("INSERT INTO staf (kode, nama, email, peran, is_aktif, diubah_pada) VALUES (?, ?, ?, ?, 0, datetime('now', '+7 hours'))")
         .bind(kode, nama, email, role)
         .run();
       staffId = ins.meta.last_row_id as number;
+      created = true;
     }
     await reply(env, chatId, `Staf baru menunggu persetujuan:\n${email} (${role})\nTekan Setujui untuk mengaktifkan.`, {
       inline_keyboard: [
@@ -103,14 +105,14 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
         ],
       ],
     });
-    return;
+    return created ? staffId : 0;
   }
 
   if (cmd === "/revoke") {
     const email = (parts[1] ?? "").toLowerCase();
     if (!email.includes("@")) {
       await reply(env, chatId, "Pakai: /revoke <email>");
-      return;
+      return 0;
     }
     const staff = await db
       .prepare("SELECT id FROM staf WHERE email = ?")
@@ -118,10 +120,10 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
       .first<{ id: number }>();
     if (!staff) {
       await reply(env, chatId, `${email} tidak ditemukan.`);
-      return;
+      return 0;
     }
     await db
-      .prepare("UPDATE staf SET is_aktif = 0 WHERE id = ?")
+      .prepare("UPDATE staf SET is_aktif = 0, diubah_pada = datetime('now', '+7 hours') WHERE id = ?")
       .bind(staff.id)
       .run();
     await db
@@ -129,7 +131,7 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
       .bind(staff.id)
       .run();
     await reply(env, chatId, `${email} dinonaktifkan, semua sesinya dicabut.`);
-    return;
+    return staff.id;
   }
 
   if (cmd === "/setopen" || cmd === "/setclosed") {
@@ -139,29 +141,31 @@ async function handleCommand(env: TelegramEnv, chatId: number, text: string): Pr
       .bind(value)
       .run();
     await reply(env, chatId, `Warkop sekarang: ${value}.`);
-    return;
+    return 0;
   }
 
   await reply(env, chatId, "Perintah tidak dikenal. Kirim /help untuk daftar perintah.");
+  return 0;
 }
 
-async function handleCallback(env: TelegramEnv, data: string, chatId: number, messageId: number): Promise<void> {
+async function handleCallback(env: TelegramEnv, data: string, chatId: number, messageId: number): Promise<number> {
   const [action, idRaw] = data.split(":");
   const staffId = Number(idRaw);
-  if (!Number.isFinite(staffId) || (action !== "approve" && action !== "reject")) return;
+  if (!Number.isFinite(staffId) || (action !== "approve" && action !== "reject")) return 0;
   const db = env.DB;
   const staff = await db
     .prepare("SELECT email, peran FROM staf WHERE id = ?")
     .bind(staffId)
     .first<StaffRow>();
-  if (!staff) return;
+  if (!staff) return 0;
   if (action === "approve") {
-    await db.prepare("UPDATE staf SET is_aktif = 1 WHERE id = ?").bind(staffId).run();
+    await db.prepare("UPDATE staf SET is_aktif = 1, diubah_pada = datetime('now', '+7 hours') WHERE id = ?").bind(staffId).run();
     await tg(env, "editMessageText", {
       chat_id: chatId,
       message_id: messageId,
       text: `Disetujui: ${staff.email} (${staff.peran}) sekarang aktif dan bisa login.`,
     });
+    return staffId;
   } else {
     await db.prepare("DELETE FROM staf WHERE id = ?").bind(staffId).run();
     await tg(env, "editMessageText", {
@@ -169,10 +173,11 @@ async function handleCallback(env: TelegramEnv, data: string, chatId: number, me
       message_id: messageId,
       text: `Ditolak dan dihapus: ${staff.email}.`,
     });
+    return 0;
   }
 }
 
-export async function handleTelegramUpdate(env: TelegramEnv, update: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+export async function handleTelegramUpdate(env: TelegramEnv, update: Record<string, unknown>): Promise<{ ok: boolean; error?: string; staffId?: number }> {
   if (!env.TELEGRAM_BOT_TOKEN) {
     return { ok: false, error: "telegram_not_configured" };
   }
@@ -183,9 +188,9 @@ export async function handleTelegramUpdate(env: TelegramEnv, update: Record<stri
       const from = cq.from as Record<string, unknown>;
       if (String(from?.id ?? "") !== adminId) return { ok: true };
       const message = cq.message as Record<string, unknown>;
-      await handleCallback(env, String(cq.data ?? ""), Number(message?.chat), Number((message as Record<string, unknown>)?.message_id));
+      const staffId = await handleCallback(env, String(cq.data ?? ""), Number(message?.chat), Number((message as Record<string, unknown>)?.message_id));
       await tg(env, "answerCallbackQuery", { callback_query_id: cq.id });
-      return { ok: true };
+      return { ok: true, staffId };
     }
     const msg = update.message as Record<string, unknown> | undefined;
     if (!msg || typeof msg.text !== "string") return { ok: true };
@@ -195,8 +200,8 @@ export async function handleTelegramUpdate(env: TelegramEnv, update: Record<stri
       await reply(env, Number(chat?.id), "Maaf, hanya admin yang bisa memakai bot ini.");
       return { ok: true };
     }
-    await handleCommand(env, Number(chat?.id), msg.text);
-    return { ok: true };
+    const staffId = await handleCommand(env, Number(chat?.id), msg.text);
+    return { ok: true, staffId };
   } catch {
     return { ok: true };
   }
