@@ -218,6 +218,19 @@ async function verifyActionToken(env: Env, token: string): Promise<Staff | null>
   return { id: row.staf_id, kode: row.kode, nama: row.nama, email: row.email, peran: row.peran };
 }
 
+function normWaPublic(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v).trim().replace(/[\s-]/g, "");
+  if (/^8\d{9,12}$/.test(s)) return "0" + s;
+  return s;
+}
+
+function maskWa(wa: string): string {
+  const d = wa.replace(/\D/g, "");
+  if (d.length < 8) return "****";
+  return d.slice(0, 4) + "****" + d.slice(-4);
+}
+
 // ---------- orders ----------
 
 async function nextOrderNumber(env: Env): Promise<string> {
@@ -497,19 +510,25 @@ export default {
       });
     }
 
-    // Track order by number (public)
+    // Track order by number (public). The WA number is proof of ownership:
+    // without a matching WA only a masked WA and no items are returned.
     const trackMatch = path.match(/^\/api\/orders\/([^/]+)$/);
     if (trackMatch && method === "GET") {
       const nomor = decodeURIComponent(trackMatch[1]);
       const order = await env.DB.prepare("SELECT * FROM pesanan WHERE nomor_pesanan = ?").bind(nomor).first();
       if (!order) return fail(req, "pesanan_tidak_ditemukan", 404);
+      const suppliedWa = normWaPublic(url.searchParams.get("wa") ?? url.searchParams.get("no_wa") ?? "");
+      const orderWa = normWaPublic((order as Record<string, unknown>).no_wa_pelanggan);
+      const verified = suppliedWa !== "" && orderWa !== "" && suppliedWa === orderWa;
+      const publicOrder = { ...(order as Record<string, unknown>), no_wa_pelanggan: maskWa(orderWa) };
+      if (!verified) return json(req, { ok: true, verified: false, order: publicOrder, items: [] });
       const items = await env.DB.prepare(
         `SELECT pi.produk_id, pi.qty, pi.harga_saat_beli, pi.subtotal, p.nama AS produk_nama
          FROM pesanan_item pi JOIN produk p ON p.id = pi.produk_id WHERE pi.pesanan_id = ?`
       )
         .bind((order as { id: number }).id)
         .all();
-      return json(req, { ok: true, order, items: items.results ?? [] });
+      return json(req, { ok: true, verified: true, order, items: items.results ?? [] });
     }
 
     // QRIS payload for an order (by order number)
