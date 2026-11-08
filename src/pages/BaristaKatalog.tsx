@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import UpdatedHint from '../components/UpdatedHint';
-import { fmtRp } from '../lib/format';
+import { fmtDigits, fmtRp } from '../lib/format';
 import { getSession } from '../lib/auth-session';
 import { usePolling } from '../lib/usePolling';
 import {
@@ -78,12 +78,10 @@ function PriceEditor({ product, onDone }: { product: Product; onDone: () => void
           <label className="cart-field">
             <span>Harga baru (Rp)</span>
             <input
-              type="number"
-              min="1"
-              step="1"
+              type="text"
               inputMode="numeric"
-              value={harga}
-              onChange={(e) => setHarga(e.target.value)}
+              value={fmtDigits(harga)}
+              onChange={(e) => setHarga(e.target.value.replace(/\D/g, ''))}
             />
           </label>
           <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => void handleRequestCode()}>

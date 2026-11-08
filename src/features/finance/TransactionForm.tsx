@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import { fmtDigits } from '../../lib/format';
 
 export const TRANSACTION_CATEGORIES = [
   'Penjualan',
@@ -130,12 +131,10 @@ export function TransactionForm({
             <span>Jumlah (Rp)</span>
             <input
               id="tx-amount"
-              type="number"
-              min="1"
-              step="1"
+              type="text"
               inputMode="numeric"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              value={fmtDigits(amount)}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
               placeholder="0"
               aria-invalid={error === 'Jumlah harus lebih dari 0.'}
               required
