@@ -237,13 +237,34 @@ async function nextOrderNumber(env: Env): Promise<string> {
   return `MBG-${today}-${pad(Date.now() % 10000, 4)}`;
 }
 
+function restoreStockStmt(env: Env, orderId: number, now: string): D1PreparedStatement {
+  return env.DB.prepare(
+    `UPDATE produk SET stok = stok + (SELECT qty FROM pesanan_item WHERE pesanan_item.pesanan_id = ? AND pesanan_item.produk_id = produk.id),
+     diubah_pada = ? WHERE id IN (SELECT produk_id FROM pesanan_item WHERE pesanan_id = ?)`
+  ).bind(orderId, now, orderId);
+}
+
+async function restoreStockMirror(env: Env, ctx: ExecutionContext, orderId: number): Promise<void> {
+  const items = await env.DB.prepare("SELECT produk_id FROM pesanan_item WHERE pesanan_id = ?").bind(orderId).all();
+  for (const it of (items.results ?? []) as { produk_id: number }[]) {
+    await mirrorProduk(env, ctx, it.produk_id);
+  }
+}
+
 async function expireStaleDrafts(env: Env): Promise<void> {
   const cutoff = wibParts(Date.now() - DRAFT_CONFIRM_MS).datetime;
-  await env.DB.prepare(
-    "UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE is_draft = 1 AND status = 'baru' AND dibuat_pada < ?"
-  )
-    .bind(wibParts(Date.now()).datetime, cutoff)
-    .run();
+  const now = wibParts(Date.now()).datetime;
+  const stale = await env.DB.prepare(
+    "SELECT id FROM pesanan WHERE is_draft = 1 AND status = 'baru' AND dibuat_pada < ?"
+  ).bind(cutoff).all();
+  const stmts: D1PreparedStatement[] = [];
+  for (const o of (stale.results ?? []) as { id: number }[]) {
+    stmts.push(
+      env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, o.id)
+    );
+    stmts.push(restoreStockStmt(env, o.id, now));
+  }
+  if (stmts.length) await env.DB.batch(stmts);
 }
 
 function stripWaForFinance(order: Record<string, unknown>, role: string): Record<string, unknown> {
@@ -572,16 +593,24 @@ export default {
         return fail(req, "pesanan_sudah_final_tidak_bisa_diubah");
       }
       if (target === "dibatalkan") {
-        await env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, orderId).run();
+        await env.DB.batch([
+          env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, orderId),
+          restoreStockStmt(env, orderId, now),
+        ]);
         await mirrorPesanan(env, ctx, orderId);
+        await restoreStockMirror(env, ctx, orderId);
         return json(req, { ok: true, order_id: orderId, status: "dibatalkan" });
       }
       // Draft confirm: must be within 3 minutes, goes baru -> disiapkan.
       if (order.is_draft === 1) {
         if (target !== "disiapkan") return fail(req, "draft_harus_dikonfirmasi_dulu");
         if (Date.now() - wibToEpoch(order.dibuat_pada) > DRAFT_CONFIRM_MS) {
-          await env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, orderId).run();
+          await env.DB.batch([
+            env.DB.prepare("UPDATE pesanan SET status = 'dibatalkan', diubah_pada = ? WHERE id = ?").bind(now, orderId),
+            restoreStockStmt(env, orderId, now),
+          ]);
           await mirrorPesanan(env, ctx, orderId);
+          await restoreStockMirror(env, ctx, orderId);
           return fail(req, "draft_lewat_batas_3_menit_otomatis_batal", 410);
         }
         await env.DB.prepare("UPDATE pesanan SET is_draft = 0, status = 'disiapkan', diubah_pada = ? WHERE id = ?").bind(now, orderId).run();
