@@ -210,6 +210,8 @@ export async function transaksiSheetRow(env: SyncEnv, t: Record<string, unknown>
     keterangan: t.keterangan ?? "",
     sumber: "sistem",
     diubah_pada: t.diubah_pada,
+    staf_id: await stafEmail(env, t.staf_id as number | null),
+    kategori: t.kategori ?? "",
   };
 }
 
@@ -601,21 +603,34 @@ async function applyTransaksi(env: SyncEnv, row: Record<string, unknown>, key: s
     pesananId = p.id;
   }
   const dibuat = normTs(row.tanggal) || ts;
-  const existing = await env.DB.prepare("SELECT id, diubah_pada FROM transaksi WHERE kode = ?").bind(kode).first<{ id: number; diubah_pada: string }>();
+  let stafId: number | null = null;
+  const stafEmailRaw = str(row.staf_id).toLowerCase();
+  if (stafEmailRaw) {
+    const s = await env.DB.prepare("SELECT id FROM staf WHERE email = ?").bind(stafEmailRaw).first<{ id: number }>();
+    if (!s) {
+      await logSync(env, "sheet_ke_worker", "Transaksi", kode, "error", `staf_id ${stafEmailRaw} tidak ada di tabel staf`);
+      return { result: "error", detail: `staf_id ${stafEmailRaw} tidak ada di tabel staf`, key: kode };
+    }
+    stafId = s.id;
+  }
+  let kategori = str(row.kategori) || null;
+  const existing = await env.DB.prepare("SELECT id, diubah_pada, staf_id, kategori FROM transaksi WHERE kode = ?").bind(kode).first<{ id: number; diubah_pada: string; staf_id: number | null; kategori: string | null }>();
   if (existing && cmpTs(ts, existing.diubah_pada) <= 0) {
     await logSync(env, "sheet_ke_worker", "Transaksi", kode, "lewat_konflik", `D1 lebih baru (${existing.diubah_pada}).`);
     return { result: "skipped_conflict", detail: "D1 lebih baru", key: kode };
   }
+  if (existing && !stafEmailRaw) stafId = existing.staf_id;
+  if (existing && !kategori) kategori = existing.kategori;
   let trxId: number;
   if (existing) {
     await env.DB.prepare(
-      "UPDATE transaksi SET jenis = ?, jumlah = ?, metode = ?, pesanan_id = ?, keterangan = ?, dibuat_pada = ?, diubah_pada = ? WHERE id = ?"
-    ).bind(jenis, jumlah, metode, pesananId, str(row.keterangan) || null, dibuat, ts, existing.id).run();
+      "UPDATE transaksi SET jenis = ?, jumlah = ?, metode = ?, pesanan_id = ?, staf_id = ?, kategori = ?, keterangan = ?, dibuat_pada = ?, diubah_pada = ? WHERE id = ?"
+    ).bind(jenis, jumlah, metode, pesananId, stafId, kategori, str(row.keterangan) || null, dibuat, ts, existing.id).run();
     trxId = existing.id;
   } else {
     const ins = await env.DB.prepare(
-      "INSERT INTO transaksi (kode, pesanan_id, jenis, jumlah, metode, keterangan, dibuat_pada, diubah_pada) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    ).bind(kode, pesananId, jenis, jumlah, metode, str(row.keterangan) || null, dibuat, ts).run();
+      "INSERT INTO transaksi (kode, pesanan_id, staf_id, jenis, jumlah, metode, kategori, keterangan, dibuat_pada, diubah_pada) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ).bind(kode, pesananId, stafId, jenis, jumlah, metode, kategori, str(row.keterangan) || null, dibuat, ts).run();
     trxId = ins.meta.last_row_id as number;
   }
   if (pesananId && jenis === "pembayaran") await refreshOrderPaid(env, pesananId);
