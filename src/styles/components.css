@@ -985,3 +985,23 @@ input:focus-visible,
     transition: none;
   }
 }
+
+.poll-updated {
+  font-size: 12px;
+  font-weight: 600;
+  color: #34d399;
+  opacity: 0.9;
+  white-space: nowrap;
+  animation: poll-fade 0.35s ease;
+}
+
+@keyframes poll-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 0.9;
+    transform: translateY(0);
+  }
+}

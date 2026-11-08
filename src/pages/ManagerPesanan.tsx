@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import OrderTable from '../components/OrderTable';
+import UpdatedHint from '../components/UpdatedHint';
 import type { Order, OrderStatus } from '../lib/dummy';
 import { friendlyError, getOrders, mapApiOrder } from '../lib/api';
+import { usePolling } from '../lib/usePolling';
 import './Manager.css';
 
 const STATUSES: Array<'Semua' | OrderStatus> = [
@@ -31,23 +33,28 @@ export default function ManagerPesanan() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const apiStatus =
-          status !== 'Semua' ? API_STATUS[status as OrderStatus] : undefined;
-        const list = await getOrders(apiStatus, 50);
-        setOrders(list.map(mapApiOrder));
-        setError('');
-      } catch (e) {
-        setError(friendlyError(e));
-      } finally {
-        setLoading(false);
-      }
-    };
-    void load();
+  const load = useCallback(async (silent = false): Promise<string> => {
+    if (!silent) setLoading(true);
+    try {
+      const apiStatus = status !== 'Semua' ? API_STATUS[status as OrderStatus] : undefined;
+      const list = await getOrders(apiStatus, 50);
+      const mapped = list.map(mapApiOrder);
+      setOrders(mapped);
+      setError('');
+      return JSON.stringify(mapped.map((o) => [o.id, o.status, o.total]));
+    } catch (e) {
+      setError(friendlyError(e));
+      return '';
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, [status]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const { justUpdated } = usePolling(() => load(true), { resetKey: status });
 
   return (
     <View>
@@ -55,6 +62,7 @@ export default function ManagerPesanan() {
         <GlassCard className="orders-card">
           <div className="card-head">
             <h2>Pesanan</h2>
+            <UpdatedHint show={justUpdated} />
             <span className="card-count">{orders.length} pesanan</span>
           </div>
           <div className="chips" role="group" aria-label="Filter status">

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
 import { OmzetAreaChart } from '../components/MbgCharts';
+import UpdatedHint from '../components/UpdatedHint';
 import { ReportPanel } from '../features/manager/ReportPanel';
 import { friendlyError, getOmzetReport } from '../lib/api';
+import { usePolling } from '../lib/usePolling';
 import { fillDaily, fmtRp, rangeDays, weekdayShort } from '../lib/format';
 import './Manager.css';
 
@@ -17,22 +19,28 @@ export default function ManagerLaporan() {
   const [range, setRange] = useState({ from: '', to: '' });
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const days = periode === '7 hari' ? 7 : 30;
-        const { from, to } = rangeDays(days);
-        const report = await getOmzetReport(from, to);
-        setDaily(fillDaily(from, to, report.daily));
-        setTotal(report.total);
-        setRange({ from, to });
-        setError('');
-      } catch (e) {
-        setError(friendlyError(e));
-      }
-    };
-    void load();
+  const load = useCallback(async (): Promise<string> => {
+    try {
+      const days = periode === '7 hari' ? 7 : 30;
+      const { from, to } = rangeDays(days);
+      const report = await getOmzetReport(from, to);
+      const filled = fillDaily(from, to, report.daily);
+      setDaily(filled);
+      setTotal(report.total);
+      setRange({ from, to });
+      setError('');
+      return JSON.stringify([filled, report.total]);
+    } catch (e) {
+      setError(friendlyError(e));
+      return '';
+    }
   }, [periode]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const { justUpdated } = usePolling(load, { resetKey: periode });
 
   const trendData = daily.map((d) => ({
     date: new Date(`${d.tanggal}T12:00:00+07:00`),
@@ -66,6 +74,7 @@ export default function ManagerLaporan() {
         <GlassCard className="chart-card stagger" style={{ '--d': '200ms' } as CSSProperties}>
           <div className="card-head">
             <h2>Tren omzet {periode}</h2>
+            <UpdatedHint show={justUpdated} />
             <span className="card-total">{fmtRp(totalOmzet)}</span>
           </div>
           <OmzetAreaChart data={trendData} />

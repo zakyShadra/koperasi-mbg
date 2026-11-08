@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Order } from '../lib/dummy';
 import { View } from '../components/View';
+import UpdatedHint from '../components/UpdatedHint';
 import { KanbanColumn } from '../features/barista/KanbanColumn';
 import { orderWaiting } from '../features/barista/OrderCard';
 import { useWarkopStatus } from '../lib/warkop';
+import { usePolling } from '../lib/usePolling';
 import {
   friendlyError,
   getQueue,
@@ -46,13 +48,16 @@ export default function Barista() {
   const isOpen = warkopStatus !== 'tutup';
   const [now, setNow] = useState(() => new Date());
 
-  const refreshQueue = useCallback(async () => {
+  const refreshQueue = useCallback(async (): Promise<string> => {
     try {
       const queue = await getQueue();
-      setOrders(queue.map(mapApiOrder));
+      const mapped = queue.map(mapApiOrder);
+      setOrders(mapped);
       setError('');
+      return JSON.stringify(mapped.map((o) => [o.id, o.status, o.total]));
     } catch (e) {
       setError(friendlyError(e));
+      return '';
     } finally {
       setLoading(false);
     }
@@ -60,9 +65,9 @@ export default function Barista() {
 
   useEffect(() => {
     void refreshQueue();
-    const id = window.setInterval(() => void refreshQueue(), 20000);
-    return () => window.clearInterval(id);
   }, [refreshQueue]);
+
+  const { justUpdated } = usePolling(refreshQueue);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60000);
@@ -171,6 +176,7 @@ export default function Barista() {
           <div className="barista-clock">
             <p className="barista-time">{timeLabel} WIB</p>
             <p className="barista-date">{dateLabel}</p>
+            <UpdatedHint show={justUpdated} />
           </div>
         </div>
 

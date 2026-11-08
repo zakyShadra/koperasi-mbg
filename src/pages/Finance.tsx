@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import StatCard from '../components/StatCard';
 import { CashFlowChart, CategoryDonut } from '../components/MbgCharts';
 import View from '../components/View';
+import UpdatedHint from '../components/UpdatedHint';
 import { TRANSACTION_CATEGORIES } from '../features/finance/TransactionForm';
 import { SHEET_URL, friendlyError, getCashReport, getTransactions } from '../lib/api';
+import { usePolling } from '../lib/usePolling';
 import type { ApiTransaction } from '../lib/api';
 import type { Transaction } from '../lib/dummy';
 import { fmtRp, formatTxDate, parseTxDate, todayWib } from '../lib/format';
@@ -63,38 +65,49 @@ export default function Finance() {
       ? paramKategori
       : 'Semua';
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const today = todayWib();
-        const monthStart = `${today.slice(0, 8)}01`;
-        const [list, report] = await Promise.all([
-          getTransactions(),
-          getCashReport(monthStart, today),
-        ]);
-        setTxs(list.map(mapTransaction));
-        setCash({ masuk: report.masuk, keluar: report.keluar, saldo: report.saldo });
-        const byCategory = new Map<string, number>();
-        for (const row of report.per_kategori) {
-          const key = row.kategori ?? 'Lainnya';
-          byCategory.set(key, (byCategory.get(key) ?? 0) + row.jumlah);
-        }
-        setDonutData(
-          [...byCategory.entries()].map(([label, value], i) => ({
-            label,
-            value,
-            color: DONUT_COLORS[i % DONUT_COLORS.length],
-          })),
-        );
-        setError('');
-      } catch (e) {
-        setError(friendlyError(e));
-      } finally {
-        setLoading(false);
+  const load = useCallback(async (): Promise<string> => {
+    try {
+      const today = todayWib();
+      const monthStart = `${today.slice(0, 8)}01`;
+      const [list, report] = await Promise.all([
+        getTransactions(),
+        getCashReport(monthStart, today),
+      ]);
+      const mapped = list.map(mapTransaction);
+      setTxs(mapped);
+      setCash({ masuk: report.masuk, keluar: report.keluar, saldo: report.saldo });
+      const byCategory = new Map<string, number>();
+      for (const row of report.per_kategori) {
+        const key = row.kategori ?? 'Lainnya';
+        byCategory.set(key, (byCategory.get(key) ?? 0) + row.jumlah);
       }
-    };
-    void load();
+      setDonutData(
+        [...byCategory.entries()].map(([label, value], i) => ({
+          label,
+          value,
+          color: DONUT_COLORS[i % DONUT_COLORS.length],
+        })),
+      );
+      setError('');
+      return JSON.stringify([
+        mapped.map((t) => [t.id, t.masuk, t.keluar]),
+        report.masuk,
+        report.keluar,
+        report.saldo,
+      ]);
+    } catch (e) {
+      setError(friendlyError(e));
+      return '';
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const { justUpdated } = usePolling(load);
 
   const cashByDay = useMemo(() => {
     const grouped = new Map<string, { day: string; masuk: number; keluar: number; sort: number }>();
@@ -202,6 +215,7 @@ export default function Finance() {
           <GlassCard className="tx-card stagger" style={{ '--d': '200ms' } as CSSProperties}>
             <div className="card-head">
               <h2>Pencatatan transaksi</h2>
+              <UpdatedHint show={justUpdated} />
               <span className="card-count">
                 {visibleTxs.length} dari {txs.length} transaksi
               </span>

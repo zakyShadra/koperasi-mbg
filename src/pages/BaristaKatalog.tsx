@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { View } from '../components/View';
 import { GlassCard } from '../components/GlassCard';
+import UpdatedHint from '../components/UpdatedHint';
 import { fmtRp } from '../lib/format';
 import { getSession } from '../lib/auth-session';
+import { usePolling } from '../lib/usePolling';
 import {
   createWalkIn,
   friendlyError,
@@ -132,13 +134,17 @@ export default function BaristaKatalog() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [walkInBusy, setWalkInBusy] = useState(false);
 
-  const loadCatalog = useCallback(async () => {
+  const loadCatalog = useCallback(async (): Promise<string> => {
     try {
+      invalidateCatalog();
       const items = await getCatalog();
-      setProducts(items.map(mapProduct).filter((p) => p.category === 'warkop'));
+      const mapped = items.map(mapProduct).filter((p) => p.category === 'warkop');
+      setProducts(mapped);
       setError('');
+      return JSON.stringify(mapped.map((p) => [p.id, p.price, p.stock, p.available]));
     } catch (e) {
       setError(friendlyError(e));
+      return '';
     } finally {
       setLoading(false);
     }
@@ -147,6 +153,8 @@ export default function BaristaKatalog() {
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  const { justUpdated } = usePolling(loadCatalog, { paused: editingId !== null });
 
   const handleToggle = async (product: Product) => {
     if (!product.apiId) return;
@@ -183,6 +191,7 @@ export default function BaristaKatalog() {
         <GlassCard className="catalog-panel">
           <div className="catalog-panel-head">
             <h2>Katalog warkop</h2>
+            <UpdatedHint show={justUpdated} />
             <button
               type="button"
               className="btn btn-primary"

@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import StatCard from '../components/StatCard';
 import { OmzetBarChart } from '../components/MbgCharts';
 import OrderTable from '../components/OrderTable';
+import UpdatedHint from '../components/UpdatedHint';
 import View from '../components/View';
+import { usePolling } from '../lib/usePolling';
 import { SHEET_URL, friendlyError, getOrders, getOmzetReport, getStats, mapApiOrder } from '../lib/api';
 import { fillDaily, fmtRp, rangeDays, weekdayShort } from '../lib/format';
 import type { Order } from '../lib/dummy';
@@ -47,24 +49,40 @@ export default function Manager() {
   const [recent, setRecent] = useState<Order[]>([]);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { from, to } = rangeDays(7);
-        const [s, report, orders] = await Promise.all([
-          getStats(),
-          getOmzetReport(from, to),
-          getOrders(undefined, 6),
-        ]);
-        setStats(s);
-        setDaily(fillDaily(from, to, report.daily));
-        setRecent(orders.map(mapApiOrder));
-      } catch (e) {
-        setError(friendlyError(e));
-      }
-    };
-    void load();
+  const load = useCallback(async (): Promise<string> => {
+    try {
+      const { from, to } = rangeDays(7);
+      const [s, report, orders] = await Promise.all([
+        getStats(),
+        getOmzetReport(from, to),
+        getOrders(undefined, 6),
+      ]);
+      const filled = fillDaily(from, to, report.daily);
+      const mapped = orders.map(mapApiOrder);
+      setStats(s);
+      setDaily(filled);
+      setRecent(mapped);
+      setError('');
+      return JSON.stringify([
+        s.omzet_hari_ini,
+        s.pesanan_hari_ini,
+        s.pesanan_selesai_hari_ini,
+        s.anggota_aktif,
+        s.stok_menipis,
+        filled,
+        mapped.map((o) => [o.id, o.status, o.total]),
+      ]);
+    } catch (e) {
+      setError(friendlyError(e));
+      return '';
+    }
   }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const { justUpdated } = usePolling(load);
 
   const chartData = useMemo(
     () => daily.map((d) => ({ day: weekdayShort(d.tanggal), value: d.omzet })),
@@ -162,6 +180,7 @@ export default function Manager() {
         <GlassCard className="orders-card stagger" style={{ '--d': '250ms' } as CSSProperties}>
           <div className="card-head">
             <h2>Pesanan terbaru</h2>
+            <UpdatedHint show={justUpdated} />
           </div>
           <OrderTable orders={recent} />
         </GlassCard>
