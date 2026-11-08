@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import StatCard from '../components/StatCard';
 import BarChart from '../components/BarChart';
 import OrderTable from '../components/OrderTable';
 import View from '../components/View';
-import { ReportPanel } from '../features/manager/ReportPanel';
 import { managerStats, omzet7Hari, recentOrders } from '../lib/dummy';
 import { fmtRp } from '../lib/format';
 import './Manager.css';
@@ -74,7 +74,20 @@ export default function Manager() {
             <BarChart data={chartData} highlightIndex={maxIndex} />
             <p className="card-foot">Total 7 hari: {fmtRp(totalOmzet)}. Hari tertinggi: {omzet7Hari[maxIndex].day}.</p>
           </GlassCard>
-          <ReportPanel />
+          <GlassCard className="manager-links stagger" style={{ '--d': '250ms' } as CSSProperties}>
+            <div className="card-head">
+              <h2>Lanjut ke</h2>
+            </div>
+            <p className="card-foot">Pesanan lengkap dengan filter status, dan panel laporan per periode.</p>
+            <div className="manager-links__actions">
+              <Link to="/manager/pesanan" className="btn btn-primary">
+                Semua pesanan
+              </Link>
+              <Link to="/manager/laporan" className="btn btn-secondary">
+                Laporan
+              </Link>
+            </div>
+          </GlassCard>
         </section>
 
         <GlassCard className="orders-card stagger" style={{ '--d': '250ms' } as CSSProperties}>

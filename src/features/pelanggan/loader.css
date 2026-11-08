@@ -317,6 +317,16 @@
   }
 }
 
+@media (max-width: 640px) {
+  .loader-scene svg {
+    width: 220px;
+  }
+
+  .pelanggan-loader {
+    padding: 0 0 4px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pelanggan-loader {
     transition: opacity 0.2s ease;

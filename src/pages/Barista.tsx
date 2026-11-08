@@ -1,33 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Order, OrderStatus } from '../lib/dummy';
-import { baristaOrders, warkopCatalog } from '../lib/dummy';
-import { fmtRp } from '../lib/format';
+import { useSearchParams } from 'react-router-dom';
+import type { Order } from '../lib/dummy';
 import { View } from '../components/View';
-import { GlassCard } from '../components/GlassCard';
 import { KanbanColumn } from '../features/barista/KanbanColumn';
-import { orderKey, orderWaiting } from '../features/barista/OrderCard';
+import { orderWaiting } from '../features/barista/OrderCard';
+import {
+  advanceBaristaOrder,
+  useBaristaDoneCount,
+  useBaristaOrders,
+} from '../features/barista/barista-store';
 import './Barista.css';
-
-const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
-  Baru: 'Disiapkan',
-  Disiapkan: 'Siap',
-  Siap: 'Selesai',
-  Selesai: null,
-};
 
 type BoardStatus = 'Baru' | 'Disiapkan' | 'Siap';
 
+const BOARD_STATUSES: BoardStatus[] = ['Baru', 'Disiapkan', 'Siap'];
+
 export default function Barista() {
-  const [orders, setOrders] = useState<Order[]>(baristaOrders);
+  const orders = useBaristaOrders();
+  const doneCount = useBaristaDoneCount();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFilter = searchParams.get('status');
   const [isOpen, setIsOpen] = useState(true);
   const [now, setNow] = useState(() => new Date());
-  const [doneCount, setDoneCount] = useState(0);
-  const [walkInCount, setWalkInCount] = useState(0);
-  const [availability, setAvailability] = useState<Record<string, boolean>>(() => {
-    const map: Record<string, boolean> = {};
-    for (const item of warkopCatalog) map[item.id] = item.available;
-    return map;
-  });
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60000);
@@ -47,44 +41,10 @@ export default function Barista() {
     return grouped;
   }, [orders]);
 
-  const handleAdvance = (order: Order) => {
-    const next = NEXT_STATUS[order.status];
-    if (!next) return;
-    if (next === 'Selesai') {
-      setOrders((prev) => prev.filter((o) => orderKey(o) !== orderKey(order)));
-      setDoneCount((c) => c + 1);
-      return;
-    }
-    setOrders((prev) =>
-      prev.map((o) => (orderKey(o) === orderKey(order) ? { ...o, status: next } : o)),
-    );
-  };
-
-  const handleWalkIn = () => {
-    const fallback = warkopCatalog.find((item) => item.available) ?? warkopCatalog[0];
-    const name = fallback ? fallback.name : 'Kopi Tubruk';
-    const price = fallback ? fallback.price : 10000;
-    const n = walkInCount + 1;
-    setWalkInCount(n);
-    const walkIn = {
-      id: `WI-${String(n).padStart(2, '0')}`,
-      time: now
-        .toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'Asia/Jakarta',
-        })
-        .replace(':', '.'),
-      customer: 'Walk-in',
-      items: name,
-      total: price,
-      source: 'Web',
-      status: 'Baru',
-      waitingMinutes: 0,
-      draft: false,
-    } as unknown as Order;
-    setOrders((prev) => [walkIn, ...prev]);
-  };
+  const visibleStatuses =
+    statusFilter && (BOARD_STATUSES as string[]).includes(statusFilter)
+      ? [statusFilter as BoardStatus]
+      : BOARD_STATUSES;
 
   const timeLabel = now.toLocaleTimeString('id-ID', {
     hour: '2-digit',
@@ -127,28 +87,50 @@ export default function Barista() {
           </div>
         </div>
 
+        {statusFilter && (
+          <div className="chips" role="group" aria-label="Filter status antrean">
+            <span className="pill">Status: {statusFilter}</span>
+            <button
+              type="button"
+              className="pill chip"
+              onClick={() => {
+                searchParams.delete('status');
+                setSearchParams(searchParams);
+              }}
+            >
+              Tampilkan semua
+            </button>
+          </div>
+        )}
+
         <div className="kanban-board">
-          <KanbanColumn
-            title="Baru"
-            tone="peach"
-            orders={columns.Baru}
-            onAdvance={handleAdvance}
-            emptyText="Belum ada pesanan baru."
-          />
-          <KanbanColumn
-            title="Disiapkan"
-            tone="teal"
-            orders={columns.Disiapkan}
-            onAdvance={handleAdvance}
-            emptyText="Belum ada yang disiapkan."
-          />
-          <KanbanColumn
-            title="Siap"
-            tone="green"
-            orders={columns.Siap}
-            onAdvance={handleAdvance}
-            emptyText="Belum ada yang siap diambil."
-          />
+          {visibleStatuses.includes('Baru') && (
+            <KanbanColumn
+              title="Baru"
+              tone="peach"
+              orders={columns.Baru}
+              onAdvance={advanceBaristaOrder}
+              emptyText="Belum ada pesanan baru."
+            />
+          )}
+          {visibleStatuses.includes('Disiapkan') && (
+            <KanbanColumn
+              title="Disiapkan"
+              tone="teal"
+              orders={columns.Disiapkan}
+              onAdvance={advanceBaristaOrder}
+              emptyText="Belum ada yang disiapkan."
+            />
+          )}
+          {visibleStatuses.includes('Siap') && (
+            <KanbanColumn
+              title="Siap"
+              tone="green"
+              orders={columns.Siap}
+              onAdvance={advanceBaristaOrder}
+              emptyText="Belum ada yang siap diambil."
+            />
+          )}
         </div>
 
         {doneCount > 0 && (
@@ -157,41 +139,6 @@ export default function Barista() {
         <p className="barista-shopee-note">
           Pesanan ShopeeFood harus dikonfirmasi maks 3 menit sebelum auto-batal.
         </p>
-
-        <GlassCard className="catalog-panel">
-          <div className="catalog-panel-head">
-            <h2>Katalog warkop</h2>
-            <button type="button" className="btn-primary" onClick={handleWalkIn}>
-              Tambah pesanan walk-in
-            </button>
-          </div>
-          <ul className="catalog-list">
-            {warkopCatalog.map((item) => {
-              const available = availability[item.id] ?? item.available;
-              return (
-                <li key={item.id} className="catalog-row">
-                  <div>
-                    <p className="catalog-name">{item.name}</p>
-                    <p className="catalog-price">{fmtRp(item.price)}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className={`btn-sm catalog-toggle${available ? ' is-available' : ' is-out'}`}
-                    aria-pressed={available}
-                    onClick={() =>
-                      setAvailability((prev) => ({ ...prev, [item.id]: !prev[item.id] }))
-                    }
-                  >
-                    {available ? 'Tersedia' : 'Habis'}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="catalog-hint">
-            Pesanan walk-in masuk ke kolom Baru dengan satu item default, bisa diubah nanti.
-          </p>
-        </GlassCard>
       </div>
     </View>
   );

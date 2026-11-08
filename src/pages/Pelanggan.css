@@ -22,6 +22,13 @@
   min-width: 200px;
 }
 
+.pelanggan-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .pelanggan-search input {
   width: 100%;
   padding: 10px 14px;
@@ -75,25 +82,11 @@
   vertical-align: middle;
 }
 
-.pelanggan-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
-  align-items: start;
-}
-
 .catalog-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
   min-width: 0;
-}
-
-.order-confirm {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: flex-start;
 }
 
 .order-confirm h2 {
@@ -148,17 +141,55 @@
 }
 
 .pelanggan-skeleton {
-  height: 248px;
+  min-height: 248px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   border-radius: 16px;
   border: 1px solid var(--hairline);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 40%),
+    rgba(13, 19, 17, 0.55);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.sk-thumb,
+.sk-line {
+  border-radius: 8px;
   background: linear-gradient(
     100deg,
-    rgba(255, 255, 255, 0.06) 30%,
-    rgba(255, 255, 255, 0.16) 50%,
-    rgba(255, 255, 255, 0.06) 70%
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.1) 70%
   );
   background-size: 200% 100%;
   animation: pelanggan-shimmer 1.4s ease-in-out infinite;
+}
+
+.sk-thumb {
+  height: 96px;
+  border-radius: 12px;
+}
+
+.sk-line {
+  height: 14px;
+}
+
+.sk-line--name {
+  width: 70%;
+  margin-top: 4px;
+}
+
+.sk-line--price {
+  width: 45%;
+}
+
+.sk-line--btn {
+  height: 34px;
+  margin-top: auto;
+  border-radius: 12px;
 }
 
 @keyframes pelanggan-shimmer {
@@ -256,15 +287,6 @@
 .product-add {
   margin-top: auto;
   width: 100%;
-}
-
-.cart-col {
-  min-width: 0;
-}
-
-.cart-panel {
-  position: sticky;
-  top: 16px;
 }
 
 .cart-solid {
@@ -531,23 +553,50 @@
   .product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .pelanggan-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .cart-panel {
-    position: static;
-  }
 }
 
 @media (max-width: 640px) {
   .product-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .pelanggan-page {
     padding: 12px 16px 24px;
+  }
+
+  .pelanggan-search {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .pelanggan-header-actions {
+    flex-basis: 100%;
+  }
+
+  .pelanggan-header-actions .btn-secondary {
+    flex: 1;
+  }
+
+  .product-card {
+    padding: 10px;
+  }
+
+  .product-thumb {
+    height: 72px;
+  }
+
+  .product-thumb > span:first-child {
+    font-size: 26px;
+  }
+
+  .pelanggan-skeleton {
+    min-height: 212px;
+    padding: 10px;
+  }
+
+  .sk-thumb {
+    height: 72px;
   }
 
   .tracker-label {
@@ -561,4 +610,117 @@
   .pelanggan-skeleton {
     animation: none;
   }
+}
+
+/* ---------- Halaman pecahan pelanggan: keranjang, checkout, lacak ---------- */
+
+.cart-page-card,
+.checkout-card,
+.tracker-card {
+  width: min(640px, 100%);
+  margin: 0 auto;
+}
+
+.cart-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--accent-teal);
+  font-size: var(--body-size);
+  font-weight: 600;
+}
+
+.pay-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.pay-field > legend {
+  color: var(--muted);
+  font-size: var(--small-size);
+  line-height: 1.5;
+  padding: 0;
+}
+
+.pay-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  background: rgba(13, 19, 17, 0.55);
+  cursor: pointer;
+}
+
+.pay-option:has(input:checked) {
+  border-color: var(--accent-teal);
+  background: rgba(45, 212, 191, 0.12);
+}
+
+.pay-option input {
+  margin-top: 3px;
+  accent-color: var(--accent-teal);
+}
+
+.pay-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pay-option strong {
+  color: var(--ink);
+  font-size: var(--body-size);
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.pay-option small {
+  color: var(--muted);
+  font-size: var(--small-size);
+  line-height: 1.5;
+}
+
+.tracker-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tracker-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--body);
+  font-size: var(--body-size);
+  line-height: 1.55;
+}
+
+.tracker-item span:last-child {
+  color: var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tracker-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--small-size);
+  line-height: 1.5;
 }

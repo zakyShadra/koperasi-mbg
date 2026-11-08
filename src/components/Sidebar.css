@@ -1,0 +1,611 @@
+/* Sidebar felvrabr: rel kaca sempit 64px yang mengembang jadi 240px,
+   label + status kanan, submenu per item, kartu preview melayang,
+   blok user di bawah. Tetap liquid glass + aksen teal/peach koperasi. */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 30;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 40%),
+    var(--rail);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-right: 1px solid var(--hairline);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: width 250ms var(--ease-in-out);
+  overflow: visible;
+}
+
+.sidebar.is-expanded {
+  width: 272px;
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 8px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-teal);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.sidebar__brand-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--body-size);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-in-out) 60ms;
+}
+
+.sidebar.is-expanded .sidebar__brand-text {
+  opacity: 1;
+}
+
+.sidebar__pin {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 180ms var(--ease-in-out),
+    transform 250ms var(--ease-in-out),
+    color 180ms var(--ease-in-out),
+    background-color 180ms var(--ease-in-out);
+}
+
+.sidebar.is-expanded .sidebar__pin {
+  opacity: 1;
+}
+
+.sidebar__pin:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar__pin[aria-pressed='true'] {
+  transform: rotate(180deg);
+  color: var(--accent-teal);
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-item {
+  position: relative;
+}
+
+.sidebar-item__row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-item__link {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  color: var(--rail-ink);
+  font-size: var(--body-size);
+  font-weight: 600;
+  line-height: 1.55;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color 180ms var(--ease-in-out),
+    color 180ms var(--ease-in-out);
+}
+
+.sidebar-item__link:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+
+.sidebar-item__link.is-active {
+  color: #fff;
+  background: var(--accent-teal);
+}
+
+.sidebar-item__icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-item__label,
+.sidebar-item__status {
+  overflow: hidden;
+  opacity: 0;
+  max-width: 0;
+  transition:
+    opacity 180ms var(--ease-in-out) 60ms,
+    max-width 250ms var(--ease-in-out);
+}
+
+.sidebar.is-expanded .sidebar-item__label {
+  opacity: 1;
+  max-width: 120px;
+}
+
+.sidebar-item__label {
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.sidebar-item__status {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: var(--small-size);
+  font-weight: 400;
+}
+
+.sidebar.is-expanded .sidebar-item__status {
+  opacity: 1;
+  max-width: 90px;
+}
+
+.sidebar-item__link.is-active .sidebar-item__status {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.sidebar-item__chev {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform 250ms var(--ease-in-out), color 180ms var(--ease-in-out);
+}
+
+.sidebar.is-expanded .sidebar-item__chev {
+  display: inline-flex;
+}
+
+.sidebar-item__chev:hover {
+  color: var(--ink);
+}
+
+.sidebar-item__chev.is-open {
+  transform: rotate(90deg);
+  color: var(--accent-teal);
+}
+
+.sidebar-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 4px 50px;
+  padding-left: 12px;
+  border-left: 1px solid var(--hairline);
+}
+
+.sidebar-submenu__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--body);
+  font-size: var(--body-size);
+  font-weight: 400;
+  line-height: 1.55;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color 180ms var(--ease-in-out),
+    color 180ms var(--ease-in-out);
+}
+
+.sidebar-submenu__link:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+
+.sidebar-submenu__link.active {
+  color: var(--accent-teal);
+  font-weight: 600;
+}
+
+.sidebar-submenu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-submenu__status {
+  color: var(--muted);
+  font-size: var(--small-size);
+}
+
+/* Kartu preview melayang: muncul di kanan sidebar saat hover baris. */
+.sidebar-flyout {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 0;
+  z-index: 40;
+  animation: flyout-in 180ms var(--ease-out) both;
+}
+
+@keyframes flyout-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.flyout-card {
+  width: 264px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  /* Sengaja opak penuh (#141c19, bukan surface-solid 0.9): kartu ini
+     melayang di atas konten halaman, teks di bawahnya tidak boleh
+     tembus dan mengacaukan angka count-up. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 40%),
+    #141c19;
+  border: 1px solid var(--hairline-strong);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.flyout-card__title {
+  color: var(--muted);
+  font-size: var(--small-size);
+  line-height: 1.5;
+}
+
+.flyout-card__total {
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: var(--number-size);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.flyout-card__total span {
+  font-size: var(--body-size);
+  font-weight: 600;
+}
+
+.flyout-card__delta {
+  margin-top: 2px;
+  font-size: var(--small-size);
+  line-height: 1.5;
+}
+
+.flyout-card__delta.is-up {
+  color: var(--success);
+}
+
+.flyout-card__delta.is-down {
+  color: var(--danger);
+}
+
+.flyout-card__delta.is-flat {
+  color: var(--muted);
+}
+
+.flyout-card__chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 96px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.flyout-bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 4px;
+  cursor: default;
+  outline: none;
+}
+
+.flyout-bar__fill {
+  width: 100%;
+  border-radius: 4px 4px 2px 2px;
+  background: var(--accent-teal);
+  animation: flyout-bar-grow 500ms var(--ease-out) both;
+}
+
+.flyout-bar__fill.is-last {
+  background: var(--accent-peach);
+}
+
+@keyframes flyout-bar-grow {
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    transform: scaleY(1);
+    transform-origin: bottom;
+  }
+}
+
+.flyout-bar__label {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flyout-bar__tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-solid);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink);
+  font-size: var(--small-size);
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Blok user di bawah sidebar. */
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.sidebar__avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(45, 212, 191, 0.14);
+  color: var(--accent-teal);
+  font-size: var(--body-size);
+  font-weight: 700;
+}
+
+.sidebar__user-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  opacity: 0;
+  transition: opacity 180ms var(--ease-in-out) 60ms;
+  overflow: hidden;
+}
+
+.sidebar.is-expanded .sidebar__user-text {
+  opacity: 1;
+}
+
+.sidebar__user-name {
+  color: var(--ink);
+  font-size: var(--small-size);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__user-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: var(--small-size);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.sidebar__logout {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 180ms var(--ease-in-out), background-color 180ms var(--ease-in-out);
+}
+
+.sidebar.is-expanded .sidebar__logout {
+  display: inline-flex;
+}
+
+.sidebar__logout:hover {
+  color: var(--danger);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-logout--mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 60px;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+    border-right: none;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .sidebar__brand,
+  .sidebar__user,
+  .sidebar-item__status,
+  .sidebar-item__chev,
+  .sidebar.is-expanded .sidebar-item__chev,
+  .sidebar-submenu,
+  .sidebar-flyout {
+    display: none;
+  }
+
+  .sidebar__nav {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 2px;
+  }
+
+  .sidebar-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+  }
+
+  .sidebar-item__row {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sidebar-item__link {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 2px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .sidebar-item__icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .sidebar-item__label {
+    max-width: none;
+    opacity: 1;
+    flex: none;
+    text-align: center;
+  }
+
+  .sidebar-logout--mobile {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 2px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--rail-ink);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+
+  .sidebar-logout--mobile .sidebar-item__label {
+    max-width: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .sidebar-item__label,
+  .sidebar-item__status,
+  .flyout-bar__fill,
+  .sidebar-flyout {
+    animation: none;
+    transition: opacity 0.2s ease;
+  }
+}

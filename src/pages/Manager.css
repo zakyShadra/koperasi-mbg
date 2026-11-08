@@ -55,6 +55,21 @@
   overflow-x: auto;
 }
 
+/* Link ke halaman pecahan (semua pesanan, laporan). */
+
+.manager-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.manager-links__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 /* Report panel (src/features/manager/ReportPanel.tsx) */
 
 .report-panel {

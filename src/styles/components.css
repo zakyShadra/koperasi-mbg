@@ -189,6 +189,42 @@ input:focus-visible,
   border: 1px solid rgba(248, 113, 113, 0.35);
 }
 
+/* ---------- Filter chips (dipakai Finance dan Manager Pesanan) ---------- */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  cursor: pointer;
+  padding: 6px 12px;
+  border: 1px solid var(--hairline);
+  background: rgba(20, 28, 25, 0.6);
+  color: var(--body);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 12px;
+  transition:
+    background 180ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chip:hover {
+  transform: translateY(-2px);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent-teal);
+  outline-offset: 1px;
+}
+
+.chip-active {
+  background: rgba(45, 212, 191, 0.18);
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+}
+
 /* ---------- Tables ---------- */
 
 .mbg-table-wrap {
@@ -750,82 +786,25 @@ input:focus-visible,
   line-height: 1.2;
   color: var(--ink);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar__date {
-  font-size: var(--small-size);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.topnav {
-  position: relative;
-  display: inline-flex;
-  gap: 4px;
-  padding: 4px;
   margin-left: auto;
-  border-radius: var(--radius-pill);
-  background: var(--rail);
-  border: 1px solid var(--hairline);
-}
-
-.topnav__indicator {
-  position: absolute;
-  top: 4px;
-  bottom: 4px;
-  left: 0;
-  border-radius: var(--radius-pill);
-  background: var(--accent-teal);
-  transition:
-    transform 250ms var(--ease-in-out),
-    width 250ms var(--ease-in-out);
-  pointer-events: none;
-}
-
-.topnav__link {
-  position: relative;
-  z-index: 1;
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  color: var(--body);
-  font-size: var(--body-size);
-  font-weight: 600;
-  line-height: 1.55;
-  white-space: nowrap;
-  transition: color 250ms var(--ease-in-out);
-}
-
-.topnav__link:hover {
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.topnav__link--active {
-  color: #fff;
-}
-
-.topbar__user {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-chip {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.3;
-}
-
-.user-chip__email {
-  font-size: var(--small-size);
-  font-weight: 600;
-  color: var(--ink);
-}
-
-.user-chip__role {
   font-size: var(--small-size);
   color: var(--muted);
-  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .topbar__title {
+    font-size: 17px;
+  }
+
+  .topbar__date {
+    display: none;
+  }
 }
 
 /* ---------- Login ---------- */
@@ -1018,8 +997,7 @@ input:focus-visible,
     transform: none !important;
   }
 
-  .tab-indicator,
-  .topnav__indicator {
+  .tab-indicator {
     transition: none;
   }
 }

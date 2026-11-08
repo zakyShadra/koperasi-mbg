@@ -47,25 +47,53 @@ tanpa sesi bakal dilempar balik ke halaman login.
 Pelanggan tidak perlu login. Checkout tamu: nama + nomor WA, lacak
 pesanan pake nomor order.
 
+## Rute
+
+| Rute | Halaman | Akses |
+| --- | --- | --- |
+| `/pelanggan` | Katalog (2 tab, cari, tambah ke keranjang) | Tamu |
+| `/pelanggan/keranjang` | Keranjang, ubah jumlah, lanjut checkout | Tamu |
+| `/pelanggan/checkout` | Nama + WA + metode bayar, kirim pesanan | Tamu |
+| `/pelanggan/lacak` | Lacak pesanan pakai nomor order | Tamu |
+| `/pelanggan/lacak/:nomor` | Status satu pesanan | Tamu |
+| `/manager` | Dashboard: stat, grafik omzet, pesanan terbaru | Staff manager |
+| `/manager/pesanan` | Semua pesanan, filter per status | Staff manager |
+| `/manager/laporan` | Panel laporan per periode | Staff manager |
+| `/finance` | Kas, tabel transaksi, donat kategori | Staff finance |
+| `/finance/transaksi-baru` | Form tambah transaksi | Staff finance |
+| `/barista` | Kanban antrean Baru / Disiapkan / Siap | Staff barista |
+| `/barista/katalog` | Katalog warkop, tandai habis, walk-in | Staff barista |
+| `/kprmbg20asdf` | Login staff (email + OTP, disembunyikan) | - |
+
+Navigasi utama adalah sidebar kiri (rel ikon 64px yang mengembang
+jadi 240px saat hover atau dikunci): ikon + label + status kanan,
+submenu per item (misal Katalog per kategori, Pesanan per status),
+kartu preview melayang saat hover (total count-up, perbandingan
+periode, grafik batang dengan tooltip), blok user di bawah. Di HP
+sidebar jadi bottom bar. Tamu tidak perlu login; checkout tamu:
+nama + nomor WA, lacak pesanan pakai nomor order.
+
 ## Alur
 
 ```mermaid
 flowchart TD
     A[Pelanggan buka /pelanggan] --> B[Lihat katalog, tambah ke keranjang]
-    B --> C[Checkout tamu: nama + WA]
-    C --> D[Order masuk antrean barista]
-    E[Order ShopeeFood masuk] --> F[Forwarder kirim notifikasi]
-    F --> G[Draft order di antrean barista]
-    G --> H[Barista konfirmasi satu tap]
-    D --> H
-    H --> I[Status: disiapkan, siap, selesai]
-    I --> J[Manager dan finance lihat di pencatatan]
+    B --> C[/pelanggan/keranjang]
+    C --> D[/pelanggan/checkout: nama + WA + bayar]
+    D --> E[/pelanggan/lacak/:nomor]
+    E --> F[Order masuk antrean barista]
+    G[Order ShopeeFood masuk] --> H[Forwarder kirim notifikasi]
+    H --> I[Draft order di antrean barista]
+    I --> J[Barista konfirmasi satu tap]
+    F --> J
+    J --> K[Status: disiapkan, siap, selesai]
+    K --> L[Manager dan finance lihat di pencatatan]
 ```
 
 ASCII fallback:
 
 ```
-Pelanggan pesan di web --> antrean barista
+Pelanggan pesan di web --> keranjang --> checkout --> lacak --> antrean barista
 ShopeeFood --> forwarder --> draft order --> barista konfirmasi
 Barista ubah status --> disiapkan, siap, selesai
 Manager dan finance lihat pencatatan
@@ -80,12 +108,22 @@ MBG/
       router.tsx      (rute + guard, judul per halaman)
     pages/
       Login.tsx       (login staff, route /kprmbg20asdf)
-      Manager.tsx     (stat, grafik omzet, tabel pesanan, laporan)
+      Manager.tsx     (stat, grafik omzet, tabel pesanan, link ke halaman pecahan)
+      ManagerPesanan.tsx (semua pesanan, filter status)
+      ManagerLaporan.tsx (panel laporan per periode)
       Finance.tsx     (kas, transaksi, donat kategori, CSV)
-      Barista.tsx     (kanban 3 kolom, katalog warkop, walk-in)
-      Pelanggan.tsx   (katalog 2 tab, keranjang, checkout tamu)
+      FinanceTransaksiBaru.tsx (form tambah transaksi)
+      Barista.tsx     (kanban 3 kolom)
+      BaristaKatalog.tsx (katalog warkop, tandai habis, walk-in)
+      Pelanggan.tsx   (katalog 2 tab, cari, tambah ke keranjang)
+      CartPage.tsx    (keranjang)
+      CheckoutPage.tsx (nama + WA + metode bayar)
+      TrackerPage.tsx (lacak pesanan pakai nomor order)
     components/
-      TopBar.tsx      (logo, tanggal, nav role, chip user)
+      TopBar.tsx      (logo, judul halaman, tanggal)
+      Sidebar.tsx     (rel kaca lipat, submenu, kartu preview melayang, blok user)
+      Sidebar.css
+      FlyoutCard.tsx  (count-up, grafik batang, tooltip per batang)
       StatCard.tsx    (kartu angka)
       BarChart.tsx    (grafik batang omzet)
       DonutChart.tsx  (donat kategori)
@@ -100,13 +138,17 @@ MBG/
       manager/
         ReportPanel.tsx
       finance/
-        TransactionForm.tsx
+        TransactionForm.tsx (modal dan mode halaman)
+        transactions-store.ts (transaksi, localStorage, dipakai Finance + form baru)
       barista/
         OrderCard.tsx
         KanbanColumn.tsx
+        barista-store.ts (antrean + ketersediaan warkop, localStorage)
       pelanggan/
         ProductCard.tsx
-        CartPanel.tsx
+        CartPanel.tsx    (CartLines: isi keranjang + total, dipakai ulang)
+        cart.ts          (fungsi murni keranjang + metode bayar sebagai data)
+        cart-context.tsx (CartProvider: keranjang + pesanan terakhir, localStorage)
         OrderTracker.tsx
         PelangganLoader.tsx (loader teko tuang kopi)
         loader.css
@@ -135,6 +177,8 @@ MBG/
 | Login dan sesi | `src/lib/auth-api.ts`, `src/lib/auth-session.ts` |
 | Token warna dan kaca | `src/styles/tokens.css`, `src/styles/components.css` |
 | Rute dan guard | `src/app/router.tsx` |
+| Sidebar dan menu per role | `src/components/Sidebar.tsx` (menu sebagai data, bukan if/else) |
+| Keranjang tamu | `src/features/pelanggan/cart-context.tsx` |
 
 ## Mau ubah... | Edit...
 
@@ -167,4 +211,11 @@ MBG/
   pertama buka. Tanpa internet, fallback ke system font.
 - Rute pake BrowserRouter, jadi harus jalan lewat dev server atau
   preview, bukan dibuka langsung file HTML-nya.
+- Keranjang, transaksi baru, dan antrean barista tersimpan di
+  localStorage perangkat (bukan server). Pesanan tamu yang dibuat di
+  web belum masuk antrean barista; itu butuh backend Worker + D1.
+- Pemisahan halaman ini selaras dengan SRP di SOLID-PLAN.md: satu
+  halaman satu pekerjaan, state dibagi lewat store kecil per fitur,
+  menu sidebar dan metode bayar ditulis sebagai data. Refactor SOLID
+  penuh belum dikerjakan, menunggu gas Zaky.
 - Foto produk belum ada, thumbnail masih tile gradien + inisial.

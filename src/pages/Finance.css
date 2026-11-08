@@ -78,38 +78,6 @@
   color: var(--muted);
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  cursor: pointer;
-  padding: 6px 12px;
-  border: 1px solid var(--hairline);
-  background: rgba(20, 28, 25, 0.6);
-  color: var(--body);
-  font-family: Inter, system-ui, sans-serif;
-  font-size: 12px;
-  transition: background 180ms cubic-bezier(0.4, 0, 0.2, 1), color 180ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.chip:hover {
-  transform: translateY(-2px);
-}
-
-.chip:focus-visible {
-  outline: 2px solid var(--accent-teal);
-  outline-offset: 1px;
-}
-
-.chip-active {
-  background: rgba(45, 212, 191, 0.18);
-  border-color: var(--accent-teal);
-  color: var(--accent-teal);
-}
-
 .table-wrap {
   overflow-x: auto;
 }
@@ -202,10 +170,24 @@
   color: var(--ink);
 }
 
-.tx-modal form {
+.tx-modal form,
+.tx-page form {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Form tambah transaksi sebagai halaman sendiri. */
+.tx-page {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tx-page .card-head {
+  align-items: center;
 }
 
 .tx-field {

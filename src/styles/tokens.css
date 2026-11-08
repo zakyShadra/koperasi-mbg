@@ -143,6 +143,19 @@ button {
   min-height: 100svh;
 }
 
+/* Ruang untuk rel sidebar 64px di desktop, dan untuk bottom bar di HP. */
+@media (min-width: 769px) {
+  .app-shell {
+    padding-left: 64px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-shell {
+    padding-bottom: 76px;
+  }
+}
+
 .app-content {
   max-width: 1280px;
   margin: 0 auto;

@@ -21,6 +21,9 @@ type TransactionFormProps = {
   open: boolean;
   onClose: () => void;
   onSubmit: (tx: NewTransactionInput) => void;
+  // 'modal': melayang di atas halaman (dipakai dulu di Finance).
+  // 'page': form jadi isi halaman sendiri (/finance/transaksi-baru).
+  mode?: 'modal' | 'page';
 };
 
 function todayIso(): string {
@@ -30,7 +33,7 @@ function todayIso(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-export function TransactionForm({ open, onClose, onSubmit }: TransactionFormProps) {
+export function TransactionForm({ open, onClose, onSubmit, mode = 'modal' }: TransactionFormProps) {
   const [date, setDate] = useState(todayIso());
   const [note, setNote] = useState('');
   const [category, setCategory] = useState<string>(TRANSACTION_CATEGORIES[0]);
@@ -84,6 +87,96 @@ export function TransactionForm({ open, onClose, onSubmit }: TransactionFormProp
     });
   };
 
+  const formBody = (
+    <>
+      <div className="card-head">
+        <h2 id="tx-form-title">Tambah transaksi</h2>
+        <button type="button" className="tx-modal-close" onClick={onClose} aria-label="Tutup">
+          Tutup
+        </button>
+      </div>
+      <form onSubmit={handleSubmit} noValidate>
+        <label className="tx-field" htmlFor="tx-date">
+          <span>Tanggal</span>
+          <input
+            id="tx-date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </label>
+        <label className="tx-field" htmlFor="tx-note">
+          <span>Keterangan</span>
+          <input
+            id="tx-note"
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Contoh: Penjualan kopi hari ini"
+            aria-invalid={error === 'Keterangan wajib diisi.'}
+            required
+          />
+        </label>
+        <label className="tx-field" htmlFor="tx-category">
+          <span>Kategori</span>
+          <select id="tx-category" value={category} onChange={(e) => setCategory(e.target.value)}>
+            {TRANSACTION_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="tx-row">
+          <label className="tx-field" htmlFor="tx-amount">
+            <span>Jumlah (Rp)</span>
+            <input
+              id="tx-amount"
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0"
+              aria-invalid={error === 'Jumlah harus lebih dari 0.'}
+              required
+            />
+          </label>
+          <label className="tx-field" htmlFor="tx-jenis">
+            <span>Jenis</span>
+            <select id="tx-jenis" value={jenis} onChange={(e) => setJenis(e.target.value as 'Masuk' | 'Keluar')}>
+              <option value="Masuk">Masuk</option>
+              <option value="Keluar">Keluar</option>
+            </select>
+          </label>
+        </div>
+        {error && (
+          <p className="tx-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="tx-form-actions">
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            Batal
+          </button>
+          <button type="submit" className="btn btn-primary">
+            Simpan transaksi
+          </button>
+        </div>
+      </form>
+    </>
+  );
+
+  if (mode === 'page') {
+    return (
+      <div className="glass-card tx-page" role="dialog" aria-labelledby="tx-form-title">
+        {formBody}
+      </div>
+    );
+  }
+
   return (
     <div className="tx-modal-veil" role="presentation" onClick={onClose}>
       <div
@@ -93,83 +186,7 @@ export function TransactionForm({ open, onClose, onSubmit }: TransactionFormProp
         aria-labelledby="tx-form-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="card-head">
-          <h2 id="tx-form-title">Tambah transaksi</h2>
-          <button type="button" className="tx-modal-close" onClick={onClose} aria-label="Tutup">
-            Tutup
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} noValidate>
-          <label className="tx-field" htmlFor="tx-date">
-            <span>Tanggal</span>
-            <input
-              id="tx-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </label>
-          <label className="tx-field" htmlFor="tx-note">
-            <span>Keterangan</span>
-            <input
-              id="tx-note"
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Contoh: Penjualan kopi hari ini"
-              aria-invalid={error === 'Keterangan wajib diisi.'}
-              required
-            />
-          </label>
-          <label className="tx-field" htmlFor="tx-category">
-            <span>Kategori</span>
-            <select id="tx-category" value={category} onChange={(e) => setCategory(e.target.value)}>
-              {TRANSACTION_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="tx-row">
-            <label className="tx-field" htmlFor="tx-amount">
-              <span>Jumlah (Rp)</span>
-              <input
-                id="tx-amount"
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0"
-                aria-invalid={error === 'Jumlah harus lebih dari 0.'}
-                required
-              />
-            </label>
-            <label className="tx-field" htmlFor="tx-jenis">
-              <span>Jenis</span>
-              <select id="tx-jenis" value={jenis} onChange={(e) => setJenis(e.target.value as 'Masuk' | 'Keluar')}>
-                <option value="Masuk">Masuk</option>
-                <option value="Keluar">Keluar</option>
-              </select>
-            </label>
-          </div>
-          {error && (
-            <p className="tx-error" role="alert">
-              {error}
-            </p>
-          )}
-          <div className="tx-form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Batal
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Simpan transaksi
-            </button>
-          </div>
-        </form>
+        {formBody}
       </div>
     </div>
   );

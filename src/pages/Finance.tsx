@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import StatCard from '../components/StatCard';
 import DonutChart from '../components/DonutChart';
 import View from '../components/View';
-import { TransactionForm } from '../features/finance/TransactionForm';
-import type { NewTransactionInput } from '../features/finance/TransactionForm';
 import { TRANSACTION_CATEGORIES } from '../features/finance/TransactionForm';
-import { categorySummary, financeStats, transactions } from '../lib/dummy';
+import { parseTxDate, useTransactions } from '../features/finance/transactions-store';
+import { categorySummary, financeStats } from '../lib/dummy';
 import type { Transaction } from '../lib/dummy';
 import { fmtRp } from '../lib/format';
 import './Finance.css';
@@ -30,35 +30,6 @@ const FINANCE_ICONS: ReactNode[] = [
   </svg>,
 ];
 
-const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-const MONTH_INDEX: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6, agu: 7, aug: 7,
-  sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11,
-};
-
-function parseTxDate(date: string): number {
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])).getTime();
-  const written = /^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/.exec(date);
-  if (written) {
-    const month = MONTH_INDEX[written[2].toLowerCase()];
-    if (month !== undefined) {
-      return new Date(Number(written[3]), month, Number(written[1])).getTime();
-    }
-  }
-  const fallback = Date.parse(date);
-  return Number.isNaN(fallback) ? 0 : fallback;
-}
-
-function formatTxDate(isoDate: string): string {
-  const parts = isoDate.split('-');
-  if (parts.length !== 3) return isoDate;
-  const day = Number(parts[2]);
-  const month = MONTHS_ID[Number(parts[1]) - 1];
-  if (!month || Number.isNaN(day)) return isoDate;
-  return `${String(day).padStart(2, '0')} ${month} ${parts[0]}`;
-}
-
 function csvEscape(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
@@ -68,10 +39,15 @@ export default function Finance() {
     () => categorySummary.map((c) => ({ label: c.category, value: c.value, color: c.color })),
     [],
   );
-  const [txs, setTxs] = useState<Transaction[]>(transactions);
+  const txs = useTransactions();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('Semua');
-  const [formOpen, setFormOpen] = useState(false);
+  const paramKategori = searchParams.get('kategori');
+  const categoryFilter =
+    paramKategori && TRANSACTION_CATEGORIES.some((c) => c === paramKategori)
+      ? paramKategori
+      : 'Semua';
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
@@ -100,19 +76,6 @@ export default function Finance() {
     });
     return [...filtered].sort((a, b) => parseTxDate(b.date) - parseTxDate(a.date));
   }, [txs, search, categoryFilter]);
-
-  const addTransaction = (input: NewTransactionInput) => {
-    const tx: Transaction = {
-      id: `tx-${Date.now()}`,
-      date: formatTxDate(input.date),
-      note: input.note,
-      category: input.category,
-      masuk: input.masuk,
-      keluar: input.keluar,
-    };
-    setTxs((prev) => [tx, ...prev]);
-    setFormOpen(false);
-  };
 
   const downloadCsv = () => {
     const header = ['Tanggal', 'Keterangan', 'Kategori', 'Masuk', 'Keluar', 'Saldo berjalan'];
@@ -154,7 +117,7 @@ export default function Finance() {
         </section>
 
         <div className="finance-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setFormOpen(true)}>
+          <button type="button" className="btn btn-primary" onClick={() => navigate('/finance/transaksi-baru')}>
             Tambah transaksi
           </button>
           <button type="button" className="btn btn-secondary" onClick={downloadCsv}>
@@ -198,7 +161,14 @@ export default function Finance() {
                     type="button"
                     className={categoryFilter === c ? 'pill chip chip-active' : 'pill chip'}
                     aria-pressed={categoryFilter === c}
-                    onClick={() => setCategoryFilter(c)}
+                    onClick={() => {
+                      if (c === 'Semua') {
+                        searchParams.delete('kategori');
+                        setSearchParams(searchParams);
+                      } else {
+                        setSearchParams({ kategori: c });
+                      }
+                    }}
                   >
                     {c}
                   </button>
@@ -250,7 +220,6 @@ export default function Finance() {
           </GlassCard>
         </section>
       </div>
-      <TransactionForm open={formOpen} onClose={() => setFormOpen(false)} onSubmit={addTransaction} />
     </View>
   );
 }
