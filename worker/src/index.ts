@@ -375,7 +375,8 @@ async function createOrder(
       .bind(Number(item.product_id))
       .first<{ id: number; kode_produk: string; harga: number; stok: number; nama: string; tersedia: number }>();
     if (!p) return fail(req, `produk_tidak_ditemukan:${item.product_id}`);
-    if (p.tersedia === 0 || p.stok < qty) return fail(req, `stok_tidak_cukup:${p.nama}`);
+    if (p.tersedia === 0) return fail(req, "Produk sedang tidak tersedia");
+    if (p.stok < qty) return fail(req, "Stok tidak cukup");
     products.push(p);
     total += p.harga * qty;
   }
