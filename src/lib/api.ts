@@ -214,6 +214,7 @@ export function mapApiOrder(o: ApiOrder): Order {
     apiId: o.id,
     time: o.dibuat_pada.slice(11, 16).replace(':', '.'),
     customer: o.nama_pelanggan,
+    wa: o.no_wa_pelanggan,
     items,
     total: o.total,
     source: o.sumber_pesanan === 'shopeefood' ? 'ShopeeFood' : 'Web',

@@ -13,6 +13,7 @@ export interface Order {
   apiId?: number;
   time: string;
   customer: string;
+  wa?: string;
   items: string;
   total: number;
   source: OrderSource;

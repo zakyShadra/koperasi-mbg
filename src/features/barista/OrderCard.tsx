@@ -72,6 +72,12 @@ function actionLabel(status: OrderStatus, isDraft: boolean): string | null {
   return null;
 }
 
+const PAY_LABEL: Record<string, string> = {
+  tunai: 'Tunai',
+  transfer: 'Transfer',
+  qris: 'QRIS',
+};
+
 export interface OrderCardProps {
   order: Order;
   onAdvance: (order: Order) => void;
@@ -95,6 +101,14 @@ export function OrderCard({ order, onAdvance, onMarkPaid, delay = 0 }: OrderCard
         <span className="order-number">{orderNumber(order)}</span>
         <StatusPill status={order.status} />
       </div>
+      <p className="order-customer">{order.customer}</p>
+      <p className="order-pay">
+        Bayar: {order.metodeBayar ? (PAY_LABEL[order.metodeBayar] ?? order.metodeBayar) : '-'}
+        {order.statusBayar === 'lunas' ? ' (Lunas)' : ' (Belum lunas)'}
+      </p>
+      {order.status === 'Siap' && order.wa && (
+        <p className="order-wa">WA: {order.wa}</p>
+      )}
       <ul className="order-items">
         {items.map((item, i) => (
           <li key={`${item.name}-${i}`}>
