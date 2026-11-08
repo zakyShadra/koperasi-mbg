@@ -3,7 +3,7 @@ import type { Session } from './auth-session';
 import type { Order, OrderStatus, Product } from './dummy';
 import { appBase } from './app-base';
 
-export const API_BASE = 'https://koperasi-mbg-api.zakyshadra.workers.dev';
+export const API_BASE = 'https://koperasimbg.ices.my.id/api';
 export const SHEET_URL =
   'https://docs.google.com/spreadsheets/d/1YLyLFdnuJ9P8rVuXAGMceX8C7SUCXesScCdxTu1Mu6k/edit';
 export const LOGO_URL = `${import.meta.env.BASE_URL}images/logo-placeholder.jpg`;
