@@ -60,7 +60,7 @@ function corsHeaders(req: Request): Record<string, string> {
   const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     "access-control-allow-origin": allow,
-    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
     "access-control-allow-headers": "content-type, authorization, x-forwarder-secret",
     "access-control-max-age": "86400",
   };
