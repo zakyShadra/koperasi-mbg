@@ -104,7 +104,7 @@ function upsert_(data) {
     if (rowNum > 0) {
       if (tsCol !== undefined) {
         var sheetTs = normTs_(sheet.getRange(rowNum, tsCol + 1).getValue());
-        if (sheetTs !== '' && incomingTs !== '' && sheetTs >= incomingTs) {
+        if (sheetTs !== '' && incomingTs !== '' && sheetTs > incomingTs) {
           skipped.push({ key: key, sheet_ts: sheetTs });
           return;
         }

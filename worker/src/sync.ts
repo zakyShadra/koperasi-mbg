@@ -714,6 +714,35 @@ export interface ReconcileTabSummary {
   error: number;
 }
 
+function normVal(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "number") return String(v);
+  return String(v).trim();
+}
+
+function diffRowValues(d1Row: Record<string, unknown>, sheetRow: Record<string, unknown>): string[] {
+  const diffs: string[] = [];
+  for (const k of Object.keys(d1Row)) {
+    if (k === "diubah_pada") continue;
+    if (!(k in sheetRow)) continue;
+    if (normVal(d1Row[k]) !== normVal(sheetRow[k])) {
+      diffs.push(`${k}: D1=${normVal(d1Row[k])} Sheet=${normVal(sheetRow[k])}`);
+    }
+  }
+  return diffs;
+}
+
+const TS_TABLE: Record<SyncTab, string> = {
+  Anggota: "anggota",
+  Kategori: "kategori",
+  Produk: "produk",
+  Pesanan: "pesanan",
+  "Pesanan Item": "pesanan_item",
+  Transaksi: "transaksi",
+  Staf: "staf",
+  Laporan: "laporan",
+};
+
 export async function reconcileAll(env: SyncEnv, ctx: ExecutionContext): Promise<{ ok: boolean; summary?: Record<string, ReconcileTabSummary>; error?: string }> {
   if (!env.GAS_MIRROR_URL || !env.GAS_MIRROR_SECRET) {
     return { ok: false, error: "gas_mirror_not_configured" };
@@ -760,7 +789,16 @@ export async function reconcileAll(env: SyncEnv, ctx: ExecutionContext): Promise
         else if (r.result === "error") s.error++;
         else s.sama++;
       } else {
-        s.sama++;
+        const diffs = diffRowValues(d1.sheetRow, sheetRow);
+        if (diffs.length) {
+          const freshTs = wibNow();
+          await env.DB.prepare(`UPDATE ${TS_TABLE[tab]} SET diubah_pada = ? WHERE id = ?`).bind(freshTs, d1.id).run();
+          await logSync(env, "reconcile", tab, key, "upsert", `drift nilai, D1 menang: ${diffs.join("; ")}`);
+          toSheet.push({ ...d1.sheetRow, diubah_pada: freshTs });
+          s.d1_ke_sheet++;
+        } else {
+          s.sama++;
+        }
       }
     }
     for (const [key, sheetRow] of sheetMap) {
